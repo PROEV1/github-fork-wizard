@@ -1,0 +1,7 @@
+project_id = "jttogvpjfeegbkpturey"
+
+[functions.get-leads]
+verify_jwt = false
+
+[functions.test-quote-form]
+verify_jwt = false
