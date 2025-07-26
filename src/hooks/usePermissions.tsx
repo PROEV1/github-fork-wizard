@@ -12,10 +12,13 @@ export function usePermissions() {
   useEffect(() => {
     const fetchPermissions = async () => {
       if (!user?.id || !role) {
+        console.log('usePermissions: Missing user or role', { userId: user?.id, role });
         setPermissions({});
         setLoading(false);
         return;
       }
+
+      console.log('usePermissions: Fetching permissions for role:', role);
 
       try {
         const { data, error } = await supabase
@@ -25,11 +28,14 @@ export function usePermissions() {
 
         if (error) throw error;
 
+        console.log('usePermissions: Raw permissions data:', data);
+
         const permissionsMap = data.reduce((acc, permission) => {
           acc[permission.permission_key] = permission.can_access;
           return acc;
         }, {} as Record<string, boolean>);
 
+        console.log('usePermissions: Processed permissions:', permissionsMap);
         setPermissions(permissionsMap);
       } catch (error) {
         console.error('Error fetching permissions:', error);
