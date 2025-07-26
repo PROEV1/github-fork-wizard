@@ -223,6 +223,13 @@ const handler = async (req: Request): Promise<Response> => {
       const emailHtml = getEmailTemplate(role, full_name || '', email, tempPassword, loginUrl);
       
       try {
+        // Check if RESEND_API_KEY is configured
+        const resendApiKey = Deno.env.get('RESEND_API_KEY');
+        if (!resendApiKey) {
+          console.error('RESEND_API_KEY not configured');
+          throw new Error('RESEND_API_KEY not configured');
+        }
+
         const emailResponse = await resend.emails.send({
           from: 'ProSpaces <noreply@resend.dev>',
           to: [email],
@@ -231,9 +238,24 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         console.log('Branded invitation email sent successfully:', emailResponse);
+        
+        if (emailResponse.error) {
+          console.error('Resend API error:', emailResponse.error);
+          throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+        }
       } catch (emailError) {
         console.error('Error sending branded email:', emailError);
-        // Don't fail the whole process if email fails, user was created successfully
+        
+        // Return error response if email fails since it's critical for user invitation
+        return new Response(
+          JSON.stringify({ 
+            error: `User account created but email invitation failed: ${emailError.message}. Please contact the user manually with their credentials.`,
+            user_id: authData.user?.id,
+            temp_password: tempPassword,
+            partial_success: true
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
       // Log the invitation
