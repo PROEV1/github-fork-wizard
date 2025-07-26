@@ -8,10 +8,43 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Search, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { UserPlus, Search, Edit, Trash2, MoreHorizontal, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+
+// Component to show client link indicator
+function ClientLinkIndicator({ userId }: { userId: string }) {
+  const [hasClientProfile, setHasClientProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkClientProfile = async () => {
+      const { data } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      
+      setHasClientProfile(!!data);
+      setLoading(false);
+    };
+
+    checkClientProfile();
+  }, [userId]);
+
+  if (loading) return null;
+
+  return hasClientProfile ? (
+    <Badge variant="outline" className="text-xs">
+      ✓ Linked
+    </Badge>
+  ) : (
+    <Badge variant="secondary" className="text-xs">
+      No Profile
+    </Badge>
+  );
+}
 
 interface UserProfile {
   id: string;
@@ -25,13 +58,12 @@ interface UserProfile {
   created_at: string;
 }
 
-export default function AdminUsers() {
+export default function AdminClientUsers() {
   const navigate = useNavigate();
   const { canManageUsers, canCreateUsers, canDeleteUsers, loading: permissionsLoading } = usePermissions();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [regionFilter, setRegionFilter] = useState<string>('all');
 
@@ -52,14 +84,14 @@ export default function AdminUsers() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .neq('role', 'client') // Exclude client users
+        .eq('role', 'client') // Only fetch client users
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to fetch users');
+      console.error('Error fetching client users:', error);
+      toast.error('Failed to fetch client users');
     } finally {
       setLoading(false);
     }
@@ -83,11 +115,11 @@ export default function AdminUsers() {
         p_details: { old_status: currentStatus, new_status: newStatus }
       });
 
-      toast.success(`User ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
+      toast.success(`Client ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
       fetchUsers();
     } catch (error) {
-      console.error('Error updating user status:', error);
-      toast.error('Failed to update user status');
+      console.error('Error updating client status:', error);
+      toast.error('Failed to update client status');
     }
   };
 
@@ -117,11 +149,11 @@ export default function AdminUsers() {
 
       if (error) throw error;
 
-      toast.success('User deleted successfully');
+      toast.success('Client deleted successfully');
       fetchUsers();
     } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      console.error('Error deleting client:', error);
+      toast.error('Failed to delete client');
     }
   };
 
@@ -129,38 +161,15 @@ export default function AdminUsers() {
     return status === 'active' ? 'default' : 'secondary';
   };
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin': return 'destructive';
-      case 'manager': return 'default';
-      case 'standard_office_user': return 'secondary';
-      case 'engineer': return 'outline';
-      case 'client': return 'outline';
-      default: return 'secondary';
-    }
-  };
-
-  const formatRole = (role: string) => {
-    switch (role) {
-      case 'standard_office_user': return 'Office User';
-      case 'admin': return 'Admin';
-      case 'manager': return 'Manager';
-      case 'engineer': return 'Engineer';
-      case 'client': return 'Client';
-      default: return role;
-    }
-  };
-
   const filteredUsers = users.filter(user => {
     const matchesSearch = !searchTerm || 
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     const matchesRegion = regionFilter === 'all' || user.region === regionFilter;
 
-    return matchesSearch && matchesRole && matchesStatus && matchesRegion;
+    return matchesSearch && matchesStatus && matchesRegion;
   });
 
   const regions = Array.from(new Set(users.map(u => u.region).filter(Boolean)));
@@ -173,43 +182,30 @@ export default function AdminUsers() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Users</h1>
-          <p className="text-muted-foreground">Manage admin, office, and engineer users</p>
+          <h1 className="text-3xl font-bold tracking-tight">Client Users</h1>
+          <p className="text-muted-foreground">Manage client portal users and their access</p>
         </div>
         {canCreateUsers && (
           <Button onClick={() => navigate('/admin/users/new')}>
             <UserPlus className="h-4 w-4 mr-2" />
-            Invite System User
+            Invite Client User
           </Button>
         )}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>System Platform Users</CardTitle>
+          <CardTitle>Client Portal Users</CardTitle>
           <div className="flex gap-4 flex-wrap">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search system users..."
+                placeholder="Search client users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-64"
               />
             </div>
-            
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="standard_office_user">Office User</SelectItem>
-                <SelectItem value="engineer">Engineer</SelectItem>
-              </SelectContent>
-            </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
@@ -244,7 +240,6 @@ export default function AdminUsers() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
                 <TableHead>Region</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Login</TableHead>
@@ -256,14 +251,12 @@ export default function AdminUsers() {
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
-                    {user.full_name || 'No name'}
+                    <div className="flex items-center gap-2">
+                      <span>{user.full_name || 'No name'}</span>
+                      <ClientLinkIndicator userId={user.user_id} />
+                    </div>
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {formatRole(user.role)}
-                    </Badge>
-                  </TableCell>
                   <TableCell>{user.region || '-'}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(user.status)}>
@@ -289,11 +282,28 @@ export default function AdminUsers() {
                           Edit User
                         </DropdownMenuItem>
                         <DropdownMenuItem 
+                          onClick={async () => {
+                            // Find linked client profile
+                            const { data } = await supabase
+                              .from('clients')
+                              .select('id')
+                              .eq('user_id', user.user_id)
+                              .single();
+                            
+                            if (data) {
+                              navigate(`/admin/clients/${data.id}`);
+                            }
+                          }}
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          View Client Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
                           onClick={() => handleStatusToggle(user.user_id, user.status)}
                         >
                           {user.status === 'active' ? 'Deactivate' : 'Activate'}
                         </DropdownMenuItem>
-                        {canDeleteUsers && user.role !== 'admin' && (
+                        {canDeleteUsers && (
                           <DropdownMenuItem 
                             onClick={() => handleDeleteUser(user.user_id, user.full_name || user.email)}
                             className="text-destructive"
