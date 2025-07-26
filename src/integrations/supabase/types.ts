@@ -1088,7 +1088,12 @@ export type Database = {
         | "install_completed_pending_qa"
         | "completed"
         | "revisit_required"
-      user_role: "admin" | "client" | "engineer"
+      user_role:
+        | "admin"
+        | "client"
+        | "engineer"
+        | "manager"
+        | "standard_office_user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1230,7 +1235,13 @@ export const Constants = {
         "completed",
         "revisit_required",
       ],
-      user_role: ["admin", "client", "engineer"],
+      user_role: [
+        "admin",
+        "client",
+        "engineer",
+        "manager",
+        "standard_office_user",
+      ],
     },
   },
 } as const
