@@ -1,9 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface InviteRequest {
+  email: string;
+  full_name: string;
+  role: string;
+  region?: string;
+}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
@@ -11,94 +19,136 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('=== ENVIRONMENT CHECK ===');
+    console.log('=== USER INVITATION REQUEST ===');
     
-    // Get all environment variables we need
+    // Get environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const resendKey = Deno.env.get('RESEND_API_KEY');
     
-    console.log('Environment variables:', {
-      SUPABASE_URL: supabaseUrl ? 'SET' : 'MISSING',
-      SUPABASE_SERVICE_ROLE_KEY: supabaseKey ? 'SET' : 'MISSING',
-      RESEND_API_KEY: resendKey ? 'SET' : 'MISSING'
+    if (!supabaseUrl || !supabaseKey || !resendKey) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required environment variables' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse request body
+    const { email, full_name, role, region }: InviteRequest = await req.json();
+    console.log('Invitation request for:', { email, full_name, role, region });
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Create user in auth
+    console.log('Creating user in Supabase Auth...');
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        full_name,
+        role,
+        region: region || '',
+      },
     });
 
-    // Return detailed status
-    const envStatus = {
-      supabase_url: !!supabaseUrl,
-      supabase_key: !!supabaseKey,
-      resend_key: !!resendKey,
-      resend_key_length: resendKey ? resendKey.length : 0,
-      resend_key_starts_with: resendKey ? resendKey.substring(0, 3) : 'none'
-    };
-
-    if (!resendKey) {
+    if (authError) {
+      console.error('Auth error:', authError);
       return new Response(
-        JSON.stringify({ 
-          error: 'RESEND_API_KEY is not configured',
-          env_status: envStatus,
-          solution: 'Please add the RESEND_API_KEY in Supabase Edge Function secrets',
-          next_step: 'Go to Supabase Dashboard > Edge Functions > Secrets and add RESEND_API_KEY'
-        }),
+        JSON.stringify({ error: 'Failed to create user', details: authError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (resendKey.length < 10) {
+    console.log('User created successfully:', authData.user?.id);
+
+    // Create profile record
+    console.log('Creating user profile...');
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        user_id: authData.user!.id,
+        email,
+        full_name,
+        role,
+        region: region || '',
+        status: 'active',
+      });
+
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      // Try to clean up the auth user
+      await supabase.auth.admin.deleteUser(authData.user!.id);
+      
       return new Response(
-        JSON.stringify({ 
-          error: 'RESEND_API_KEY appears to be invalid (too short)',
-          env_status: envStatus,
-          solution: 'Check that you copied the full API key from Resend dashboard'
-        }),
+        JSON.stringify({ error: 'Failed to create user profile', details: profileError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Test the API key with a simple request
-    console.log('Testing RESEND API key...');
-    const testResponse = await fetch('https://api.resend.com/emails', {
+    // Send invitation email
+    console.log('Sending invitation email...');
+    const inviteLink = `${supabaseUrl}/auth/v1/verify?token=${authData.user!.email_confirmation_token}&type=signup&redirect_to=https://preview--pro-spaces-client-portal.lovable.app/auth`;
+    
+    const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'ProSpaces <onboarding@resend.dev>',
-        to: ['paul@prospaces.co.uk'],
-        subject: 'ProSpaces Invitation Test',
-        html: '<h1>Test from ProSpaces</h1><p>If you receive this, Resend is working!</p>',
+        from: 'ProSpaces Portal <info@prospaces.co.uk>',
+        to: [email],
+        subject: 'You\'ve been invited to ProSpaces Portal',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #333;">Welcome to ProSpaces Portal</h1>
+            <p>Hi ${full_name},</p>
+            <p>You've been invited to join the ProSpaces Portal with the role of <strong>${role}</strong>.</p>
+            <p>Click the button below to complete your account setup:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${inviteLink}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Complete Account Setup
+              </a>
+            </div>
+            <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 3px;">
+              ${inviteLink}
+            </p>
+            <p>Welcome to the team!</p>
+            <p>Best regards,<br>ProSpaces Team</p>
+          </div>
+        `,
       }),
     });
 
-    const testResult = await testResponse.text();
-    console.log('Resend response:', { status: testResponse.status, body: testResult });
+    const emailResult = await emailResponse.text();
+    console.log('Email response:', { status: emailResponse.status, body: emailResult });
 
-    if (testResponse.status === 200) {
-      const parsedResult = JSON.parse(testResult);
+    if (emailResponse.status !== 200) {
+      console.error('Failed to send email:', emailResult);
       return new Response(
         JSON.stringify({ 
-          success: true,
-          message: 'RESEND is working perfectly!',
-          email_id: parsedResult.id,
-          env_status: envStatus,
-          next_step: 'Resend is configured correctly - we can now build the full invitation system'
+          error: 'User created but failed to send invitation email',
+          details: emailResult,
+          user_id: authData.user!.id
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    } else {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Resend API returned error',
-          status: testResponse.status,
-          response: testResult,
-          env_status: envStatus,
-          solution: 'Check your Resend API key and domain verification'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
+
+    const emailData = JSON.parse(emailResult);
+    console.log('Invitation sent successfully');
+
+    return new Response(
+      JSON.stringify({ 
+        success: true,
+        message: 'User invited successfully',
+        user_id: authData.user!.id,
+        email_id: emailData.id
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error: any) {
     console.error('Function error:', error);
