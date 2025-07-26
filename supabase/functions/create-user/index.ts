@@ -38,24 +38,6 @@ serve(async (req) => {
     
     console.log('Supabase client created successfully');
     
-    // Check if user exists
-    console.log('Checking if user exists...');
-    const { data: existing, error: checkError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-      
-    console.log('User check result:', { existing, checkError });
-      
-    if (existing) {
-      console.log('User already exists, returning error');
-      return new Response(
-        JSON.stringify({ error: 'User already exists' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
     // Create user with admin API
     console.log('Creating user with admin API...');
     const { data: user, error } = await supabase.auth.admin.createUser({
@@ -75,23 +57,22 @@ serve(async (req) => {
       throw new Error('User creation succeeded but no user ID returned');
     }
 
-    // Create profile
-    console.log('Creating profile for user:', user.user.id);
+    // Update the profile that was automatically created by the trigger
+    console.log('Updating auto-created profile for user:', user.user.id);
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert({
-        user_id: user.user.id,
-        email,
+      .update({
         full_name,
         role,
         region: region || '',
         status: 'active',
-      });
+      })
+      .eq('user_id', user.user.id);
 
-    console.log('Profile creation result:', { profileError });
+    console.log('Profile update result:', { profileError });
 
     if (profileError) {
-      console.error('Profile creation failed, cleaning up user:', profileError);
+      console.error('Profile update failed, cleaning up user:', profileError);
       await supabase.auth.admin.deleteUser(user.user.id);
       throw profileError;
     }
