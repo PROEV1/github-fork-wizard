@@ -15,27 +15,75 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('=== USER INVITATION START ===');
     
     const body = await req.json();
+    console.log('Request body:', JSON.stringify(body, null, 2));
     const { email, full_name, role, region } = body;
     
+    // Validate required fields
+    if (!email || !full_name || !role) {
+      console.error('Missing required fields:', { email: !!email, full_name: !!full_name, role: !!role });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing required fields: email, full_name, and role are required',
+          success: false
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
     // Get environment variables
+    console.log('Checking environment variables...');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const resendKey = Deno.env.get('RESEND_API_KEY');
     
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasResendKey: !!resendKey
+    });
+    
     if (!supabaseUrl || !supabaseKey || !resendKey) {
-      throw new Error('Missing environment variables');
+      console.error('Missing environment variables');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error: Missing environment variables',
+          success: false
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     // Initialize Supabase client
+    console.log('Initializing Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Check if user already exists in profiles
     console.log('Checking if user already exists in profiles...');
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: profileCheckError } = await supabase
       .from('profiles')
       .select('email, user_id')
       .eq('email', email)
       .maybeSingle();
+    
+    if (profileCheckError) {
+      console.error('Error checking existing profile:', profileCheckError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database error while checking existing user',
+          success: false
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
     
     if (existingProfile) {
       console.log('User already exists in profiles:', existingProfile.email);
@@ -51,19 +99,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user exists in auth but not in profiles (orphaned record)
-    console.log('Checking for orphaned auth records...');
-    const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers();
-    if (!listError && authUsers) {
-      const existingAuthUser = authUsers.users.find(user => user.email === email);
-      if (existingAuthUser) {
-        console.log('Found orphaned auth user, cleaning up...');
-        await supabase.auth.admin.deleteUser(existingAuthUser.id);
-      }
-    }
-    
     // Create user in auth
-    console.log('Creating user...');
+    console.log('Creating user in auth...');
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       email_confirm: true,
@@ -72,8 +109,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (authError) {
       console.error('Auth error:', authError);
-      throw new Error(`Failed to create user: ${authError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Failed to create user: ${authError.message}`,
+          success: false
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+
+    console.log('User created in auth:', authData.user?.id);
 
     // Create profile record
     console.log('Creating profile...');
@@ -90,12 +138,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError) {
       console.error('Profile error:', profileError);
+      // Clean up auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authData.user!.id);
-      throw new Error(`Failed to create profile: ${profileError.message}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Failed to create user profile: ${profileError.message}`,
+          success: false
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
+    console.log('Profile created successfully');
+
     // Send invitation email
-    console.log('Sending email...');
+    console.log('Sending email via Resend...');
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -127,8 +187,21 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const emailResult = await emailResponse.text();
+    console.log('Email response status:', emailResponse.status);
+    console.log('Email response:', emailResult);
+    
     if (emailResponse.status !== 200) {
-      throw new Error(`Email failed: ${emailResult}`);
+      console.error('Email failed:', emailResult);
+      return new Response(
+        JSON.stringify({ 
+          error: `Failed to send invitation email: ${emailResult}`,
+          success: false
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     console.log('SUCCESS - User created and email sent');
@@ -147,9 +220,10 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('Function error:', error);
+    console.error('Error stack:', error.stack);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: `Internal server error: ${error.message}`,
         success: false
       }),
       { 
