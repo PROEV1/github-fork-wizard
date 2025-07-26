@@ -152,7 +152,20 @@ export default function AdminMessages() {
                     onClick={() => setSelectedClientId(client.id)}
                   >
                     <div className="space-y-1">
-                      <p className="font-medium">{client.full_name}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium">{client.full_name}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/clients/${client.id}`);
+                          }}
+                          className="h-6 px-2 text-xs"
+                        >
+                          View Profile
+                        </Button>
+                      </div>
                       <p className="text-sm text-muted-foreground">{client.email}</p>
                     </div>
                   </div>

@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ProductSelector } from './ProductSelector';
 import { ClientLeadHistory } from './ClientLeadHistory';
+import MessagesSection from './MessagesSection';
 
 
 interface Client {
@@ -871,6 +872,25 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
           </CardContent>
         </Card>
       </div>
+
+      {/* Messages Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <MessageSquare className="h-5 w-5 mr-2" />
+            Messages
+          </CardTitle>
+          <CardDescription>
+            Chat with {client.full_name}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <MessagesSection 
+            clientId={client.id}
+            title={`Messages with ${client.full_name}`}
+          />
+        </CardContent>
+      </Card>
 
       {/* Lead History Section */}
       <ClientLeadHistory clientId={client.id} />
