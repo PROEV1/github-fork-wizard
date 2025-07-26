@@ -39,44 +39,21 @@ export default function AdminUserInvite() {
 
     setLoading(true);
     try {
-      // Create user directly using Supabase admin API
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        email_confirm: true,
-        user_metadata: { 
-          full_name: formData.full_name, 
-          role: formData.role, 
-          region: formData.region || '' 
-        },
-      });
-
-      if (authError) {
-        throw new Error(`Failed to create user: ${authError.message}`);
-      }
-
-      // Create profile record
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user!.id,
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
           email: formData.email,
           full_name: formData.full_name,
           role: formData.role,
-          region: formData.region || '',
-          status: 'active',
-        });
+          region: formData.region,
+        }
+      });
 
-      if (profileError) {
-        // Clean up auth user if profile creation fails
-        await supabase.auth.admin.deleteUser(authData.user!.id);
-        throw new Error(`Failed to create profile: ${profileError.message}`);
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      console.log('User created successfully:', authData.user?.id);
-      toast.success('User created successfully! They can now sign in with their email.');
+      toast.success('User created successfully!');
       navigate('/admin/users');
     } catch (error: any) {
-      console.error('Error creating user:', error);
       toast.error(error.message || 'Failed to create user');
     } finally {
       setLoading(false);
