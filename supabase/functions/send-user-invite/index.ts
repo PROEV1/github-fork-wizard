@@ -167,16 +167,76 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if user already exists
     const { data: existingUser } = await supabaseClient
       .from('profiles')
-      .select('email')
+      .select('email, user_id, full_name, role, status')
       .eq('email', email)
       .maybeSingle();
 
     if (existingUser) {
-      console.log('User already exists:', email);
-      return new Response(
-        JSON.stringify({ error: `User with email ${email} already exists` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      console.log('User already exists, resending invitation email:', email);
+      
+      // Generate new temporary password for existing user
+      const tempPassword = generateTempPassword();
+      
+      // Update user with new password
+      const { error: passwordError } = await supabaseClient.auth.admin.updateUserById(
+        existingUser.user_id,
+        { password: tempPassword }
       );
+
+      if (passwordError) {
+        console.error('Error updating user password:', passwordError);
+        return new Response(
+          JSON.stringify({ error: 'User exists but failed to update password' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Send invitation email for existing user
+      const loginUrl = 'https://preview--pro-spaces-client-portal.lovable.app/auth';
+      const emailHtml = getEmailTemplate(existingUser.role, existingUser.full_name || '', email, tempPassword, loginUrl);
+      
+      try {
+        const resendApiKey = Deno.env.get('RESEND_API_KEY');
+        if (!resendApiKey) {
+          console.error('RESEND_API_KEY not configured');
+          throw new Error('RESEND_API_KEY not configured');
+        }
+
+        const emailResponse = await resend.emails.send({
+          from: 'ProSpaces <noreply@resend.dev>',
+          to: [email],
+          subject: `ProSpaces Account - Updated Credentials`,
+          html: emailHtml,
+        });
+
+        console.log('Resent invitation email successfully:', emailResponse);
+        
+        if (emailResponse.error) {
+          console.error('Resend API error:', emailResponse.error);
+          throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Invitation email resent successfully',
+            user_id: existingUser.user_id,
+            resent: true
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+        
+      } catch (emailError) {
+        console.error('Error resending invitation email:', emailError);
+        return new Response(
+          JSON.stringify({ 
+            error: `User exists but failed to send invitation email: ${emailError.message}`,
+            user_id: existingUser.user_id,
+            temp_password: tempPassword
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Generate secure temporary password
