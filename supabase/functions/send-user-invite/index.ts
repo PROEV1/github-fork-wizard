@@ -34,8 +34,29 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Parse request body
-    const { email, full_name, role, region }: InviteRequest = await req.json();
-    console.log('Invitation request for:', { email, full_name, role, region });
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log('Raw request data:', requestData);
+    } catch (parseError) {
+      console.error('Failed to parse request JSON:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { email, full_name, role, region }: InviteRequest = requestData;
+    console.log('Parsed invitation request:', { email, full_name, role, region });
+
+    // Validate required fields
+    if (!email || !full_name || !role) {
+      console.error('Missing required fields:', { email: !!email, full_name: !!full_name, role: !!role });
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: email, full_name, and role are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
