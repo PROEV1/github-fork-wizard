@@ -66,9 +66,15 @@ export default function AdminUserInvite() {
 
       if (error) {
         console.error('Function error:', error);
-        throw error;
+        throw new Error(`Function call failed: ${error.message}`);
       }
 
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
+      }
+
+      console.log('Success! Function returned:', data);
       toast.success('User invitation sent successfully');
       navigate('/admin/users');
     } catch (error) {
