@@ -39,7 +39,7 @@ export default function AdminUserInvite() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-user', {
+      const { data, error } = await supabase.functions.invoke('send-user-invite', {
         body: {
           email: formData.email,
           full_name: formData.full_name,
