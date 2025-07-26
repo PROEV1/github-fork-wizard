@@ -813,7 +813,12 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          invite_token: string | null
+          invited_at: string | null
+          last_login: string | null
+          region: string | null
           role: Database["public"]["Enums"]["user_role"]
+          status: string | null
           updated_at: string
           user_id: string
         }
@@ -822,7 +827,12 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          last_login?: string | null
+          region?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          status?: string | null
           updated_at?: string
           user_id: string
         }
@@ -831,7 +841,12 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          invite_token?: string | null
+          invited_at?: string | null
+          last_login?: string | null
+          region?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          status?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1049,6 +1064,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_permissions: {
+        Row: {
+          can_access: boolean | null
+          created_at: string | null
+          id: string
+          permission_key: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          can_access?: boolean | null
+          created_at?: string | null
+          id?: string
+          permission_key: string
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          can_access?: boolean | null
+          created_at?: string | null
+          id?: string
+          permission_key?: string
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
       }
     }
     Views: {
