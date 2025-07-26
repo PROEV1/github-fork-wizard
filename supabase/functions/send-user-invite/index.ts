@@ -24,14 +24,17 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Environment check:', {
       hasSupabaseUrl: !!supabaseUrl,
       hasResendKey: !!resendKey,
-      supabaseUrl: supabaseUrl ? 'configured' : 'missing'
+      supabaseUrl: supabaseUrl ? 'configured' : 'missing',
+      resendKeyLength: resendKey ? resendKey.length : 0
     });
 
     if (!resendKey) {
+      console.error('RESEND_API_KEY is missing from environment variables');
       return new Response(
         JSON.stringify({ 
           error: 'RESEND_API_KEY not configured',
-          debug: 'Environment variable missing'
+          debug: 'Environment variable missing - please check Supabase Edge Function secrets',
+          hasKey: false
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
