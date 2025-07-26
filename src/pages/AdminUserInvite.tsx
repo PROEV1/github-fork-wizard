@@ -53,7 +53,7 @@ export default function AdminUserInvite() {
       }
 
       // Call edge function to send invite
-      const { data, error } = await supabase.functions.invoke('test-invite', {
+      const { data, error } = await supabase.functions.invoke('send-user-invite', {
         body: {
           email: formData.email,
           full_name: formData.full_name,
