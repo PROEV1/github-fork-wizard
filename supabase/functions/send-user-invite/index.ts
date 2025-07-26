@@ -1,17 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface InviteRequest {
-  email: string;
-  full_name: string;
-  role: string;
-  region?: string;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
@@ -19,100 +11,21 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('=== USER INVITATION REQUEST ===');
+    console.log('Function started');
     
-    // Get environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // Just test if we can send a simple email first
     const resendKey = Deno.env.get('RESEND_API_KEY');
+    console.log('Resend key exists:', !!resendKey);
     
-    if (!supabaseUrl || !supabaseKey || !resendKey) {
-      console.error('Missing environment variables');
+    if (!resendKey) {
       return new Response(
-        JSON.stringify({ error: 'Missing required environment variables' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse request body
-    let requestData;
-    try {
-      requestData = await req.json();
-      console.log('Raw request data:', requestData);
-    } catch (parseError) {
-      console.error('Failed to parse request JSON:', parseError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ error: 'No Resend API key' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const { email, full_name, role, region }: InviteRequest = requestData;
-    console.log('Parsed invitation request:', { email, full_name, role, region });
-
-    // Clean up region value - convert null to empty string
-    const cleanRegion = region || '';
-
-    // Validate required fields
-    if (!email || !full_name || !role) {
-      console.error('Missing required fields:', { email: !!email, full_name: !!full_name, role: !!role });
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: email, full_name, and role are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Create user in auth
-    console.log('Creating user in Supabase Auth...');
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        full_name,
-        role,
-        region: cleanRegion,
-      },
-    });
-
-    if (authError) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create user', details: authError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('User created successfully:', authData.user?.id);
-
-    // Create profile record
-    console.log('Creating user profile...');
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        user_id: authData.user!.id,
-        email,
-        full_name,
-        role,
-        region: cleanRegion,
-        status: 'active',
-      });
-
-    if (profileError) {
-      console.error('Profile error:', profileError);
-      // Try to clean up the auth user
-      await supabase.auth.admin.deleteUser(authData.user!.id);
-      
-      return new Response(
-        JSON.stringify({ error: 'Failed to create user profile', details: profileError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Send invitation email using Resend
-    console.log('Sending invitation email...');
+    
+    // Send a simple test email
+    console.log('Attempting to send email...');
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -121,63 +34,42 @@ const handler = async (req: Request): Promise<Response> => {
       },
       body: JSON.stringify({
         from: 'ProSpaces Portal <info@prospaces.co.uk>',
-        to: [email],
-        subject: 'You\'ve been invited to ProSpaces Portal',
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Welcome to ProSpaces Portal</h1>
-            <p>Hi ${full_name},</p>
-            <p>You've been invited to join the ProSpaces Portal with the role of <strong>${role}</strong>.</p>
-            <p>To get started, please sign in to your account at:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Sign In to Portal
-              </a>
-            </div>
-            <p>Your account has been created with email: <strong>${email}</strong></p>
-            <p>You can set your password when you first sign in.</p>
-            <p>Welcome to the team!</p>
-            <p>Best regards,<br>ProSpaces Team</p>
-          </div>
-        `,
+        to: ['paul@prospaces.co.uk'],
+        subject: 'Test Email from ProSpaces',
+        html: '<h1>Test</h1><p>This is a test email to verify Resend is working.</p>',
       }),
     });
 
     const emailResult = await emailResponse.text();
-    console.log('Email response:', { status: emailResponse.status, body: emailResult });
+    console.log('Email response status:', emailResponse.status);
+    console.log('Email response body:', emailResult);
 
-    if (emailResponse.status !== 200) {
-      console.error('Failed to send email:', emailResult);
+    if (emailResponse.status === 200) {
       return new Response(
         JSON.stringify({ 
-          error: 'User created but failed to send invitation email',
-          details: emailResult,
-          user_id: authData.user!.id
+          success: true,
+          message: 'Test email sent successfully',
+          email_response: emailResult
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    } else {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Email sending failed',
+          status: emailResponse.status,
+          response: emailResult
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    const emailData = JSON.parse(emailResult);
-    console.log('Invitation sent successfully');
-
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        message: 'User invited successfully',
-        user_id: authData.user!.id,
-        email_id: emailData.id
-      }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error: any) {
     console.error('Function error:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Function failed',
-        message: error.message,
-        stack: error.stack?.split('\n').slice(0, 5)
+        message: error.message
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
