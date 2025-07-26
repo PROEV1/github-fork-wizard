@@ -1,17 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface InviteRequest {
-  email: string;
-  full_name?: string;
-  role: 'admin' | 'client' | 'engineer' | 'manager' | 'standard_office_user';
-  region?: string;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
@@ -19,108 +12,109 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('Starting user invitation process...');
+    console.log('=== RESEND DIAGNOSTIC TEST ===');
     
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { email, full_name, role, region }: InviteRequest = await req.json();
-    console.log('Request data:', { email, role });
-
-    if (!email || !role) {
-      return new Response(
-        JSON.stringify({ error: 'Email and role are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if user already exists
-    const { data: existingUser } = await supabaseClient
-      .from('profiles')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingUser) {
-      console.log('User already exists:', email);
-      return new Response(
-        JSON.stringify({ error: `User with email ${email} already exists` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Generate invite token for the invitation URL
-    const inviteToken = crypto.randomUUID();
-    
-    // Create the user with Supabase Auth (reliable built-in system)
-    const { data: authData, error: authError } = await supabaseClient.auth.admin.inviteUserByEmail(email, {
-      data: {
-        full_name: full_name || '',
-        role: role,
-        region: region || null,
-        invite_token: inviteToken,
-      },
-      redirectTo: 'https://preview--pro-spaces-client-portal.lovable.app/auth'
+    // Step 1: Check RESEND_API_KEY
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    console.log('Step 1 - API Key check:', {
+      hasKey: !!resendApiKey,
+      keyLength: resendApiKey ? resendApiKey.length : 0,
+      keyPrefix: resendApiKey ? resendApiKey.substring(0, 7) + '...' : 'none'
     });
-
-    if (authError) {
-      console.error('Auth error:', authError);
+    
+    if (!resendApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Failed to create user invitation' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'RESEND_API_KEY not found',
+          step: 'env_check',
+          debug: 'Environment variable missing'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Update the profile with additional information
-    if (authData.user) {
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .update({
-          full_name: full_name || null,
-          role: role,
-          region: region || null,
-          status: 'active',
-          invited_at: new Date().toISOString(),
-          invite_token: inviteToken,
-        })
-        .eq('user_id', authData.user.id);
+    // Step 2: Initialize Resend
+    console.log('Step 2 - Initializing Resend...');
+    const resend = new Resend(resendApiKey);
+    console.log('Step 2 - Resend initialized successfully');
 
-      if (profileError) {
-        console.error('Profile update error:', profileError);
-      }
+    // Step 3: Parse request
+    const body = await req.json();
+    console.log('Step 3 - Request body:', body);
+    const email = body.email || 'test@example.com';
 
-      // Log the invitation
-      await supabaseClient.rpc('log_user_action', {
-        p_action_type: 'user_invited',
-        p_target_user_id: authData.user.id,
-        p_details: {
-          email: email,
-          role: role,
-          region: region,
-          invited_by: 'admin',
-          method: 'supabase_reliable'
+    // Step 4: Test different sender addresses
+    const senderOptions = [
+      'ProSpaces <onboarding@resend.dev>',
+      'ProSpaces <portal@prospaces.co.uk>',
+      'portal@prospaces.co.uk'
+    ];
+
+    for (let i = 0; i < senderOptions.length; i++) {
+      const sender = senderOptions[i];
+      console.log(`Step 4.${i + 1} - Testing sender: ${sender}`);
+      
+      try {
+        const testResult = await resend.emails.send({
+          from: sender,
+          to: [email],
+          subject: `Resend Test ${i + 1} - ${sender}`,
+          html: `
+            <h1>Resend Test Email #${i + 1}</h1>
+            <p>From: ${sender}</p>
+            <p>To: ${email}</p>
+            <p>Time: ${new Date().toISOString()}</p>
+            <p>This is a test to verify the Resend integration is working.</p>
+          `,
+        });
+
+        console.log(`Step 4.${i + 1} - SUCCESS:`, testResult);
+        
+        if (testResult.error) {
+          console.log(`Step 4.${i + 1} - Resend API error:`, testResult.error);
+          continue; // Try next sender
         }
-      });
+
+        // If we get here, this sender worked
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: `Email sent successfully with sender: ${sender}`,
+            workingSender: sender,
+            emailId: testResult.data?.id,
+            step: `sender_test_${i + 1}`,
+            debug: 'Found working sender configuration'
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      } catch (senderError) {
+        console.error(`Step 4.${i + 1} - Sender test error:`, senderError);
+        continue; // Try next sender
+      }
     }
 
-    console.log('User invitation sent successfully:', { email, role });
-
+    // If we get here, all senders failed
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: 'User invitation sent successfully',
-        user_id: authData.user?.id,
-        note: 'Using reliable Supabase email system'
+        error: 'All sender addresses failed',
+        step: 'all_senders_failed',
+        testedSenders: senderOptions,
+        debug: 'Check domain verification in Resend dashboard'
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Error in send-user-invite function:', error);
+    console.error('=== DIAGNOSTIC ERROR ===', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'Diagnostic test failed',
+        message: error.message,
+        stack: error.stack,
+        step: 'main_error',
+        debug: 'Check function logs for details'
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
