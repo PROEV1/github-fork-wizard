@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'ProSpaces Portal <info@prospaces.co.uk>',
+        from: 'ProSpaces Portal <info@portal.prospaces.co.uk>',
         to: [email],
         subject: 'Welcome to ProSpaces Portal',
         html: `
