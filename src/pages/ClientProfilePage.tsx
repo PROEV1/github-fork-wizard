@@ -11,6 +11,7 @@ interface Client {
   phone: string | null;
   address: string | null;
   created_at: string;
+  user_id: string | null;
 }
 
 export default function ClientProfilePage() {
@@ -32,7 +33,7 @@ export default function ClientProfilePage() {
     try {
       const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('id, full_name, email, phone, address, created_at, user_id')
         .eq('id', clientId)
         .single();
 

@@ -25,6 +25,18 @@ interface Client {
   phone: string | null;
   address: string | null;
   created_at: string;
+  user_id: string | null;
+}
+
+interface UserAccount {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  role: string;
+  status: string;
+  last_login: string | null;
+  created_at: string;
 }
 
 interface Project {
@@ -100,6 +112,7 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
   const [projects, setProjects] = useState<Project[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateQuote, setShowCreateQuote] = useState(false);
   const [showEditClient, setShowEditClient] = useState(false);
@@ -130,6 +143,21 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
 
   const loadClientData = async () => {
     try {
+      // Load user account if client has user_id
+      if (client.user_id) {
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', client.user_id)
+          .single();
+
+        if (userError && userError.code !== 'PGRST116') {
+          console.error('User profile error:', userError);
+        } else if (userData) {
+          setUserAccount(userData);
+        }
+      }
+
       // Load projects
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
@@ -293,6 +321,22 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
 
       if (error) throw error;
 
+      // If client has user account, sync the changes to the profile
+      if (client.user_id && userAccount) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: clientForm.full_name,
+            email: clientForm.email
+          })
+          .eq('user_id', client.user_id);
+
+        if (profileError) {
+          console.error('Error updating user profile:', profileError);
+          // Don't fail the entire operation for this
+        }
+      }
+
       toast({
         title: "Success",
         description: "Client information updated successfully",
@@ -301,6 +345,8 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
       setShowEditClient(false);
       // Update the client object
       Object.assign(client, clientForm);
+      // Reload data to get updated user account info
+      loadClientData();
     } catch (error) {
       console.error('Error updating client:', error);
       toast({
@@ -487,6 +533,89 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
     }
   };
 
+  const handleResendInvite = async () => {
+    if (!client.user_id || !userAccount) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('send-client-invite', {
+        body: {
+          email: client.email,
+          full_name: client.full_name,
+          tempPassword: 'PasswordReset123!', // This should be generated
+          siteUrl: window.location.origin
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Invitation resent successfully",
+      });
+    } catch (error) {
+      console.error('Error resending invite:', error);
+      toast({
+        title: "Error",
+        description: "Failed to resend invitation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!client.user_id || !userAccount) return;
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(client.email, {
+        redirectTo: `${window.location.origin}/auth`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Password reset email sent",
+      });
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send password reset email",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeactivateUser = async () => {
+    if (!client.user_id || !userAccount) return;
+
+    const newStatus = userAccount.status === 'active' ? 'inactive' : 'active';
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('user_id', client.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `User account ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
+      });
+
+      // Reload data to get updated status
+      loadClientData();
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -497,6 +626,62 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
   const getTotalQuoteValue = () => {
     const materialsCost = selectedProducts.reduce((total, item) => total + item.totalPrice, 0);
     return materialsCost;
+  };
+
+  const getAccountStatus = () => {
+    if (!userAccount) return 'No Account';
+    if (userAccount.status === 'inactive') return 'Deactivated';
+    if (!userAccount.last_login) return 'Never Logged In';
+    return 'Active';
+  };
+
+  const getAccountStatusColor = () => {
+    const status = getAccountStatus();
+    switch (status) {
+      case 'Active': return 'bg-green-500';
+      case 'Never Logged In': return 'bg-yellow-500';
+      case 'Deactivated': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const handleCreateUserAccount = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-create-client-user', {
+        body: {
+          clientId: client.id,
+          email: client.email,
+          fullName: client.full_name
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Portal account created! Temporary password: ${data.tempPassword}`,
+      });
+
+      // Send welcome email with login details
+      await supabase.functions.invoke('send-client-invite', {
+        body: {
+          email: client.email,
+          full_name: client.full_name,
+          tempPassword: data.tempPassword,
+          siteUrl: window.location.origin
+        }
+      });
+
+      // Reload data to show the new account
+      loadClientData();
+    } catch (error) {
+      console.error('Error creating user account:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create portal account",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -872,6 +1057,104 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
           </CardContent>
         </Card>
       </div>
+
+      {/* Client Portal Access Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <User className="h-5 w-5 mr-2" />
+            Client Portal Access
+          </CardTitle>
+          <CardDescription>
+            Manage login access and account settings for this client
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {userAccount ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Account Status</Label>
+                  <Badge className={`${getAccountStatusColor()} text-white w-fit`}>
+                    {getAccountStatus()}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Last Login</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {userAccount.last_login 
+                      ? new Date(userAccount.last_login).toLocaleDateString() 
+                      : 'Never logged in'
+                    }
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Account Created</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(userAccount.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleResendInvite}
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Resend Invite
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleResetPassword}
+                >
+                  Reset Password
+                </Button>
+                <Button 
+                  variant={userAccount.status === 'active' ? 'destructive' : 'default'}
+                  size="sm"
+                  onClick={handleDeactivateUser}
+                >
+                  {userAccount.status === 'active' ? 'Deactivate Account' : 'Activate Account'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate(`/admin/users/${userAccount.user_id}`)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit User Profile
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="space-y-4">
+                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto">
+                  <User className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium">No Portal Access</h3>
+                  <p className="text-sm text-muted-foreground">
+                    This client does not have login access to the portal yet.
+                  </p>
+                </div>
+                <Button 
+                  variant="outline"
+                  onClick={handleCreateUserAccount}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Portal Account
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Messages Section */}
       <Card>

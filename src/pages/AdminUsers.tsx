@@ -8,10 +8,43 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Search, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { UserPlus, Search, Edit, Trash2, MoreHorizontal, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+
+// Component to show client link indicator
+function ClientLinkIndicator({ userId }: { userId: string }) {
+  const [hasClientProfile, setHasClientProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkClientProfile = async () => {
+      const { data } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+      
+      setHasClientProfile(!!data);
+      setLoading(false);
+    };
+
+    checkClientProfile();
+  }, [userId]);
+
+  if (loading) return null;
+
+  return hasClientProfile ? (
+    <Badge variant="outline" className="text-xs">
+      ✓ Linked
+    </Badge>
+  ) : (
+    <Badge variant="secondary" className="text-xs">
+      No Profile
+    </Badge>
+  );
+}
 
 interface UserProfile {
   id: string;
@@ -256,7 +289,12 @@ export default function AdminUsers() {
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
-                    {user.full_name || 'No name'}
+                    <div className="flex items-center gap-2">
+                      <span>{user.full_name || 'No name'}</span>
+                      {user.role === 'client' && (
+                        <ClientLinkIndicator userId={user.user_id} />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -288,6 +326,25 @@ export default function AdminUsers() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit User
                         </DropdownMenuItem>
+                        {user.role === 'client' && (
+                          <DropdownMenuItem 
+                            onClick={async () => {
+                              // Find linked client profile
+                              const { data } = await supabase
+                                .from('clients')
+                                .select('id')
+                                .eq('user_id', user.user_id)
+                                .single();
+                              
+                              if (data) {
+                                navigate(`/admin/clients/${data.id}`);
+                              }
+                            }}
+                          >
+                            <User className="h-4 w-4 mr-2" />
+                            View Client Profile
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           onClick={() => handleStatusToggle(user.user_id, user.status)}
                         >
