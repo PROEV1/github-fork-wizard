@@ -13,7 +13,7 @@ import ChatInput from './ChatInput';
 interface Message {
   id: string;
   content: string;
-  sender_role: 'admin' | 'client' | 'engineer';
+  sender_role: 'admin' | 'client' | 'engineer' | 'manager' | 'standard_office_user';
   created_at: string;
   is_read: boolean;
   sender_id: string;
@@ -40,7 +40,7 @@ export default function WhatsAppChat({
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'admin' | 'client' | 'engineer'>('client');
+  const [userRole, setUserRole] = useState<'admin' | 'client' | 'engineer' | 'manager' | 'standard_office_user'>('client');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

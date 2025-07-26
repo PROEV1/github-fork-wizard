@@ -1065,6 +1065,33 @@ export type Database = {
           },
         ]
       }
+      user_audit_log: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          performed_by: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          performed_by: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          performed_by?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_access: boolean | null
@@ -1098,6 +1125,10 @@ export type Database = {
         Args: { order_row: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: Database["public"]["Enums"]["order_status_enhanced"]
       }
+      get_user_assigned_jobs_count: {
+        Args: { user_id: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1111,6 +1142,18 @@ export type Database = {
           p_created_by?: string
         }
         Returns: string
+      }
+      log_user_action: {
+        Args: {
+          p_action_type: string
+          p_target_user_id: string
+          p_details?: Json
+        }
+        Returns: string
+      }
+      user_has_permission: {
+        Args: { user_id: string; permission_key: string }
+        Returns: boolean
       }
     }
     Enums: {

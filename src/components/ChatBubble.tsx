@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface Message {
   id: string;
   content: string;
-  sender_role: 'admin' | 'client' | 'engineer';
+  sender_role: 'admin' | 'client' | 'engineer' | 'manager' | 'standard_office_user';
   created_at: string;
   is_read: boolean;
   sender_id: string;

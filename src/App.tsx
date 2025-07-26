@@ -24,6 +24,9 @@ import EngineerJobDetail from "./pages/EngineerJobDetail";
 import Auth from "./pages/Auth";
 import AdminMessages from "./pages/AdminMessages";
 import AdminSettings from "./pages/AdminSettings";
+import AdminUsers from "./pages/AdminUsers";
+import AdminUserDetail from "./pages/AdminUserDetail";
+import AdminUserInvite from "./pages/AdminUserInvite";
 import OrderDetail from "./pages/OrderDetail";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import EnhancedClientOrderView from "./pages/EnhancedClientOrderView";
@@ -57,6 +60,9 @@ const App = () => (
             <Route path="/admin/quotes/:id/edit" element={<Layout><AdminQuoteEdit /></Layout>} />
             <Route path="/admin/quotes/:quoteId" element={<Layout><AdminQuoteDetail /></Layout>} />
             <Route path="/admin/messages" element={<Layout><AdminMessages /></Layout>} />
+            <Route path="/admin/users" element={<Layout><AdminUsers /></Layout>} />
+            <Route path="/admin/users/new" element={<Layout><AdminUserInvite /></Layout>} />
+            <Route path="/admin/users/:userId" element={<Layout><AdminUserDetail /></Layout>} />
             <Route path="/admin/settings" element={<Layout><AdminSettings /></Layout>} />
             <Route path="/admin/client/:clientId" element={<Layout><ClientProfilePage /></Layout>} />
             <Route path="/admin/order/:orderId" element={<Layout><OrderDetail /></Layout>} />

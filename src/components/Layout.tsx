@@ -2,7 +2,8 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings, FileText, MessageCircle, FolderOpen, Users, Package, ChevronDown, ShoppingCart } from 'lucide-react';
+import { LogOut, User, Settings, FileText, MessageCircle, FolderOpen, Users, Package, ChevronDown, ShoppingCart, UserCog } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 import { ProSpacesLogo } from '@/components/ProSpacesLogo';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useState, useEffect } from 'react';
@@ -18,6 +19,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [roleLoading, setRoleLoading] = useState(true);
+  const { canManageUsers } = usePermissions();
 
   useEffect(() => {
     if (user) {
@@ -96,6 +98,7 @@ export default function Layout({ children }: LayoutProps) {
     { icon: Users, label: 'Leads', href: '/admin/leads', action: () => navigate('/admin/leads') },
     { icon: Package, label: 'Products', href: '/admin/products', action: () => navigate('/admin/products') },
     { icon: MessageCircle, label: 'Messages', href: '/admin/messages', action: () => navigate('/admin/messages') },
+    ...(canManageUsers ? [{ icon: UserCog, label: 'Users', href: '/admin/users', action: () => navigate('/admin/users') }] : []),
     { icon: Settings, label: 'Settings', href: '/admin/settings', action: () => navigate('/admin/settings') },
   ];
 
