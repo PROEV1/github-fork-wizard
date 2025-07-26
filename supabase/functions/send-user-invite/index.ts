@@ -203,7 +203,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         const emailResponse = await resend.emails.send({
-          from: 'ProSpaces <noreply@resend.dev>',
+          from: 'ProSpaces <onboarding@resend.dev>',
           to: [email],
           subject: `ProSpaces Account - Updated Credentials`,
           html: emailHtml,
@@ -213,7 +213,7 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (emailResponse.error) {
           console.error('Resend API error:', emailResponse.error);
-          throw new Error(`Email sending failed: ${emailResponse.error.message}`);
+          throw new Error(`Email sending failed: ${JSON.stringify(emailResponse.error)}`);
         }
 
         return new Response(
@@ -292,7 +292,7 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         const emailResponse = await resend.emails.send({
-          from: 'ProSpaces <noreply@resend.dev>',
+          from: 'ProSpaces <onboarding@resend.dev>',
           to: [email],
           subject: `Welcome to ProSpaces - Your ${role} account is ready`,
           html: emailHtml,
