@@ -39,47 +39,45 @@ export default function AdminUserInvite() {
 
     setLoading(true);
     try {
-      // First check if user already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', formData.email)
-        .single();
+      // Create user directly using Supabase admin API
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        email_confirm: true,
+        user_metadata: { 
+          full_name: formData.full_name, 
+          role: formData.role, 
+          region: formData.region || '' 
+        },
+      });
 
-      if (existingUser) {
-        toast.error('A user with this email already exists');
-        setLoading(false);
-        return;
+      if (authError) {
+        throw new Error(`Failed to create user: ${authError.message}`);
       }
 
-      // Call edge function to send invite
-      const { data, error } = await supabase.functions.invoke('send-user-invite', {
-        body: {
+      // Create profile record
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: authData.user!.id,
           email: formData.email,
           full_name: formData.full_name,
           role: formData.role,
-          region: formData.region || null,
-        }
-      });
+          region: formData.region || '',
+          status: 'active',
+        });
 
-      console.log('Function response:', { data, error });
-
-      if (error) {
-        console.error('Function error:', error);
-        throw new Error(`Function call failed: ${error.message}`);
+      if (profileError) {
+        // Clean up auth user if profile creation fails
+        await supabase.auth.admin.deleteUser(authData.user!.id);
+        throw new Error(`Failed to create profile: ${profileError.message}`);
       }
 
-      if (data?.error) {
-        console.error('Function returned error:', data.error);
-        throw new Error(data.error);
-      }
-
-      console.log('Success! Function returned:', data);
-      toast.success('User invitation sent successfully');
+      console.log('User created successfully:', authData.user?.id);
+      toast.success('User created successfully! They can now sign in with their email.');
       navigate('/admin/users');
-    } catch (error) {
-      console.error('Error sending invite:', error);
-      toast.error('Failed to send user invitation');
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast.error(error.message || 'Failed to create user');
     } finally {
       setLoading(false);
     }
