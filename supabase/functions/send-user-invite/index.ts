@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,108 +11,84 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('=== RESEND DIAGNOSTIC TEST ===');
+    console.log('=== SIMPLE RESEND TEST ===');
     
-    // Step 1: Check RESEND_API_KEY
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    console.log('Step 1 - API Key check:', {
-      hasKey: !!resendApiKey,
-      keyLength: resendApiKey ? resendApiKey.length : 0,
-      keyPrefix: resendApiKey ? resendApiKey.substring(0, 7) + '...' : 'none'
+    // Check API key
+    const apiKey = Deno.env.get('RESEND_API_KEY');
+    console.log('API Key status:', {
+      exists: !!apiKey,
+      length: apiKey?.length || 0
     });
     
-    if (!resendApiKey) {
+    if (!apiKey) {
       return new Response(
         JSON.stringify({ 
-          error: 'RESEND_API_KEY not found',
-          step: 'env_check',
-          debug: 'Environment variable missing'
+          error: 'RESEND_API_KEY missing',
+          solution: 'Please configure the RESEND_API_KEY secret in Supabase'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Step 2: Initialize Resend
-    console.log('Step 2 - Initializing Resend...');
-    const resend = new Resend(resendApiKey);
-    console.log('Step 2 - Resend initialized successfully');
-
-    // Step 3: Parse request
+    // Try manual fetch to Resend API instead of using the npm package
     const body = await req.json();
-    console.log('Step 3 - Request body:', body);
-    const email = body.email || 'test@example.com';
-
-    // Step 4: Test different sender addresses
-    const senderOptions = [
-      'ProSpaces <onboarding@resend.dev>',
-      'ProSpaces <portal@prospaces.co.uk>',
-      'portal@prospaces.co.uk'
-    ];
-
-    for (let i = 0; i < senderOptions.length; i++) {
-      const sender = senderOptions[i];
-      console.log(`Step 4.${i + 1} - Testing sender: ${sender}`);
-      
-      try {
-        const testResult = await resend.emails.send({
-          from: sender,
-          to: [email],
-          subject: `Resend Test ${i + 1} - ${sender}`,
-          html: `
-            <h1>Resend Test Email #${i + 1}</h1>
-            <p>From: ${sender}</p>
-            <p>To: ${email}</p>
+    const email = body.email || 'paul@prospaces.co.uk';
+    
+    console.log('Trying direct API call to Resend...');
+    
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'ProSpaces <onboarding@resend.dev>',
+        to: [email],
+        subject: 'ProSpaces Test Email - Direct API',
+        html: `
+          <div style="font-family: Arial, sans-serif;">
+            <h1 style="color: #8ac4c2;">ProSpaces Test Email</h1>
+            <p>This is a test email sent directly via Resend API.</p>
             <p>Time: ${new Date().toISOString()}</p>
-            <p>This is a test to verify the Resend integration is working.</p>
-          `,
-        });
+            <p>If you receive this, the Resend integration is working!</p>
+          </div>
+        `,
+      }),
+    });
 
-        console.log(`Step 4.${i + 1} - SUCCESS:`, testResult);
-        
-        if (testResult.error) {
-          console.log(`Step 4.${i + 1} - Resend API error:`, testResult.error);
-          continue; // Try next sender
-        }
+    const result = await response.json();
+    console.log('Resend API response:', { status: response.status, result });
 
-        // If we get here, this sender worked
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            message: `Email sent successfully with sender: ${sender}`,
-            workingSender: sender,
-            emailId: testResult.data?.id,
-            step: `sender_test_${i + 1}`,
-            debug: 'Found working sender configuration'
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-
-      } catch (senderError) {
-        console.error(`Step 4.${i + 1} - Sender test error:`, senderError);
-        continue; // Try next sender
-      }
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Resend API failed',
+          status: response.status,
+          details: result,
+          solution: 'Check API key and domain configuration'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // If we get here, all senders failed
     return new Response(
       JSON.stringify({ 
-        error: 'All sender addresses failed',
-        step: 'all_senders_failed',
-        testedSenders: senderOptions,
-        debug: 'Check domain verification in Resend dashboard'
+        success: true,
+        message: 'Email sent successfully via direct API!',
+        emailId: result.id,
+        solution: 'Resend is working - we can now build the full invitation system'
       }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('=== DIAGNOSTIC ERROR ===', error);
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'Diagnostic test failed',
+        error: 'Function failed',
         message: error.message,
-        stack: error.stack,
-        step: 'main_error',
-        debug: 'Check function logs for details'
+        solution: 'Check function logs for details'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
