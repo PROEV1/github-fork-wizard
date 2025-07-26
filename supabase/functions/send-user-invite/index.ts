@@ -169,11 +169,12 @@ const handler = async (req: Request): Promise<Response> => {
       .from('profiles')
       .select('email')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (existingUser) {
+      console.log('User already exists:', email);
       return new Response(
-        JSON.stringify({ error: 'User with this email already exists' }),
+        JSON.stringify({ error: `User with email ${email} already exists` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
