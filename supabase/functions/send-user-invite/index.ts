@@ -279,7 +279,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     try {
       const emailResponse = await resend.emails.send({
-        from: 'ProSpaces <noreply@prospaces.co.uk>',
+        from: 'ProSpaces <portal@prospaces.co.uk>',
         to: [email],
         subject: `Welcome to ProSpaces - Your ${role} account is ready`,
         html: emailHtml,
