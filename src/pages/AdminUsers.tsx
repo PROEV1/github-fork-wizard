@@ -97,31 +97,26 @@ export default function AdminUsers() {
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone and will remove the user from the system completely.`)) {
       return;
     }
 
     try {
-      // First, log the action
-      await supabase.rpc('log_user_action', {
-        p_action_type: 'user_deleted',
-        p_target_user_id: userId,
-        p_details: { user_name: userName }
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId }
       });
-
-      // Delete the user profile
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('user_id', userId);
 
       if (error) throw error;
 
-      toast.success('User deleted successfully');
-      fetchUsers();
-    } catch (error) {
+      if (data?.success) {
+        toast.success(`User ${data.deletedUser?.full_name || data.deletedUser?.email} deleted successfully`);
+        fetchUsers();
+      } else {
+        throw new Error(data?.error || 'Failed to delete user');
+      }
+    } catch (error: any) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      toast.error(error.message || 'Failed to delete user');
     }
   };
 
