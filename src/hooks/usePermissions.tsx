@@ -5,12 +5,19 @@ import { useUserRole } from './useUserRole';
 
 export function usePermissions() {
   const { user } = useAuth();
-  const { role } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchPermissions = async () => {
+      console.log('usePermissions: Starting fetch', { userId: user?.id, role, roleLoading });
+      
+      if (roleLoading) {
+        console.log('usePermissions: Role still loading, waiting...');
+        return;
+      }
+      
       if (!user?.id || !role) {
         console.log('usePermissions: Missing user or role', { userId: user?.id, role });
         setPermissions({});
@@ -46,7 +53,7 @@ export function usePermissions() {
     };
 
     fetchPermissions();
-  }, [user?.id, role]);
+  }, [user?.id, role, roleLoading]);
 
   const hasPermission = (permissionKey: string): boolean => {
     return permissions[permissionKey] === true;
