@@ -49,6 +49,9 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, full_name, role, region }: InviteRequest = requestData;
     console.log('Parsed invitation request:', { email, full_name, role, region });
 
+    // Clean up region value - convert null to empty string
+    const cleanRegion = region || '';
+
     // Validate required fields
     if (!email || !full_name || !role) {
       console.error('Missing required fields:', { email: !!email, full_name: !!full_name, role: !!role });
@@ -69,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
       user_metadata: {
         full_name,
         role,
-        region: region || '',
+        region: cleanRegion,
       },
     });
 
@@ -92,7 +95,7 @@ const handler = async (req: Request): Promise<Response> => {
         email,
         full_name,
         role,
-        region: region || '',
+        region: cleanRegion,
         status: 'active',
       });
 
