@@ -147,11 +147,14 @@ export default function WhatsAppChat({
 
         console.log('WhatsAppChat: Client data:', clientData);
 
-        if (clientData) {
-          // For client-specific messages, get:
-          // 1. Messages where sender_id matches client's user_id (messages FROM client)
-          // 2. General conversation messages (no quote_id/project_id) - includes admin messages to this client
-          query = query.or(`sender_id.eq.${clientData.user_id},and(quote_id.is.null,project_id.is.null)`);
+        if (clientData?.user_id) {
+          // For client-specific messages, filter by sender_id matching the client's user_id
+          query = query.eq('sender_id', clientData.user_id);
+        } else {
+          // If no valid client data, return empty results
+          setMessages([]);
+          setLoading(false);
+          return;
         }
       } else if (quoteId) {
         query = query.eq('quote_id', quoteId);

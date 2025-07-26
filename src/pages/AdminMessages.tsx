@@ -33,9 +33,16 @@ export default function AdminMessages() {
 
   const loadClients = async () => {
     try {
+      // Get clients who have sent messages
       const { data, error } = await supabase
         .from('clients')
-        .select('id, full_name, email')
+        .select(`
+          id, 
+          full_name, 
+          email,
+          user_id,
+          messages!inner(id)
+        `)
         .order('full_name');
 
       if (error) throw error;
@@ -45,7 +52,7 @@ export default function AdminMessages() {
       console.error('Error loading clients:', error);
       toast({
         title: "Error",
-        description: "Failed to load clients",
+        description: "Failed to load clients with messages",
         variant: "destructive",
       });
     } finally {
