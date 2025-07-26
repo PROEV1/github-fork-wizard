@@ -29,6 +29,19 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    // Check if user already exists
+    console.log('Checking if user already exists...');
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('email, user_id')
+      .eq('email', email)
+      .maybeSingle();
+    
+    if (existingProfile) {
+      console.log('User already exists:', existingProfile.email);
+      throw new Error(`User with email ${email} already exists in the system`);
+    }
+    
     // Create user in auth
     console.log('Creating user...');
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
