@@ -87,43 +87,80 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email using Resend API
     console.log('Sending invitation email to:', email);
-    const emailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'ProSpaces Portal <info@portal.prospaces.co.uk>',
-        to: [email],
-        subject: 'Welcome to ProSpaces Portal',
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Welcome to ProSpaces Portal</h1>
-            <p>Hi ${full_name},</p>
-            <p>You've been invited to join ProSpaces Portal with the role of <strong>${role}</strong>.</p>
-            <p>To get started, please sign in at:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" 
-                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Sign In to Portal
-              </a>
-            </div>
-            <p>Your email: <strong>${email}</strong></p>
-            <p>You can set your password when you first sign in.</p>
-            <p>Best regards,<br>ProSpaces Team</p>
+    console.log('Using Resend API key (first 8 chars):', resendKey.substring(0, 8) + '...');
+    
+    const emailPayload = {
+      from: 'ProSpaces Portal <info@portal.prospaces.co.uk>',
+      to: [email],
+      subject: 'Welcome to ProSpaces Portal',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #333;">Welcome to ProSpaces Portal</h1>
+          <p>Hi ${full_name},</p>
+          <p>You've been invited to join ProSpaces Portal with the role of <strong>${role}</strong>.</p>
+          <p>To get started, please sign in at:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" 
+               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+              Sign In to Portal
+            </a>
           </div>
-        `,
-      }),
-    });
+          <p>Your email: <strong>${email}</strong></p>
+          <p>You can set your password when you first sign in.</p>
+          <p>Best regards,<br>ProSpaces Team</p>
+        </div>
+      `,
+    };
+    
+    console.log('Email payload:', JSON.stringify(emailPayload, null, 2));
+    
+    try {
+      const emailResponse = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailPayload),
+      });
 
-    console.log('Email response status:', emailResponse.status);
+      console.log('Email response status:', emailResponse.status);
+      console.log('Email response headers:', Object.fromEntries(emailResponse.headers.entries()));
+      
+      const responseText = await emailResponse.text();
+      console.log('Email response body:', responseText);
 
-    if (emailResponse.status !== 200) {
-      const emailError = await emailResponse.text();
-      console.error('Email sending failed:', emailError);
+      if (emailResponse.status !== 200) {
+        console.error('Email sending failed - Status:', emailResponse.status);
+        console.error('Email sending failed - Response:', responseText);
+        
+        let errorMessage = 'Unknown error';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorData.error || responseText;
+        } catch {
+          errorMessage = responseText;
+        }
+        
+        return new Response(
+          JSON.stringify({ error: `Email failed (${emailResponse.status}): ${errorMessage}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Parse successful response
+      let emailData;
+      try {
+        emailData = JSON.parse(responseText);
+        console.log('Email sent successfully - Email ID:', emailData.id);
+      } catch {
+        console.log('Email sent successfully - Raw response:', responseText);
+      }
+      
+    } catch (emailError: any) {
+      console.error('Email sending exception:', emailError);
       return new Response(
-        JSON.stringify({ error: `Email failed: ${emailError}` }),
+        JSON.stringify({ error: `Email failed: ${emailError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
