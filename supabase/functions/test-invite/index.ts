@@ -29,8 +29,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Check if user already exists
-    console.log('Checking if user already exists...');
+    // Check if user already exists in profiles
+    console.log('Checking if user already exists in profiles...');
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('email, user_id')
@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
     
     if (existingProfile) {
-      console.log('User already exists:', existingProfile.email);
+      console.log('User already exists in profiles:', existingProfile.email);
       return new Response(
         JSON.stringify({ 
           error: `User with email ${email} already exists in the system`,
@@ -49,6 +49,17 @@ const handler = async (req: Request): Promise<Response> => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
+    }
+
+    // Check if user exists in auth but not in profiles (orphaned record)
+    console.log('Checking for orphaned auth records...');
+    const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers();
+    if (!listError && authUsers) {
+      const existingAuthUser = authUsers.users.find(user => user.email === email);
+      if (existingAuthUser) {
+        console.log('Found orphaned auth user, cleaning up...');
+        await supabase.auth.admin.deleteUser(existingAuthUser.id);
+      }
     }
     
     // Create user in auth
