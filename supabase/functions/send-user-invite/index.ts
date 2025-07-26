@@ -150,12 +150,15 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    console.log('Starting user invitation process...');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { email, full_name, role, region }: InviteRequest = await req.json();
+    console.log('Parsed request data:', { email, full_name, role, region });
 
     if (!email || !role) {
       return new Response(
