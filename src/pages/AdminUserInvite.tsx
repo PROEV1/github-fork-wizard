@@ -53,7 +53,7 @@ export default function AdminUserInvite() {
       }
 
       // Call edge function to send invite
-      const { data, error } = await supabase.functions.invoke('send-user-invite', {
+      const { data, error } = await supabase.functions.invoke('test-invite', {
         body: {
           email: formData.email,
           full_name: formData.full_name,
@@ -62,7 +62,12 @@ export default function AdminUserInvite() {
         }
       });
 
-      if (error) throw error;
+      console.log('Function response:', { data, error });
+
+      if (error) {
+        console.error('Function error:', error);
+        throw error;
+      }
 
       toast.success('User invitation sent successfully');
       navigate('/admin/users');
