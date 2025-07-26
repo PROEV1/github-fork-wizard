@@ -11,7 +11,10 @@ export function useUserRole() {
 
   useEffect(() => {
     const fetchUserRole = async () => {
+      console.log('useUserRole: Starting fetch, user:', user);
+      
       if (!user?.id) {
+        console.log('useUserRole: No user ID, setting role to null');
         setRole(null);
         setLoading(false);
         return;
@@ -21,7 +24,7 @@ export function useUserRole() {
         console.log('useUserRole: Fetching role for user ID:', user.id);
         const { data, error } = await supabase
           .from('profiles')
-          .select('role')
+          .select('role, status')
           .eq('user_id', user.id)
           .maybeSingle();
 
@@ -33,17 +36,24 @@ export function useUserRole() {
         }
         
         if (data) {
-          console.log('useUserRole: Setting role to:', data.role);
-          setRole(data.role as UserRole);
+          console.log('useUserRole: Found profile, role:', data.role, 'status:', data.status);
+          if (data.status === 'active') {
+            setRole(data.role as UserRole);
+            console.log('useUserRole: Set role to:', data.role);
+          } else {
+            console.log('useUserRole: User is inactive, setting role to null');
+            setRole(null);
+          }
         } else {
           console.log('useUserRole: No profile found, setting role to null');
           setRole(null);
         }
       } catch (error) {
-        console.error('Error fetching user role:', error);
+        console.error('useUserRole: Error fetching user role:', error);
         setRole(null);
       } finally {
         setLoading(false);
+        console.log('useUserRole: Finished loading');
       }
     };
 
