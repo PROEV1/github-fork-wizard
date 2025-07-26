@@ -12,41 +12,75 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== CREATE USER FUNCTION START ===');
+    
     const { email, full_name, role, region } = await req.json();
+    console.log('Request data:', { email, full_name, role, region });
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    const supabase = createClient(supabaseUrl, serviceKey);
+    console.log('Environment check:');
+    console.log('- SUPABASE_URL exists:', !!supabaseUrl);
+    console.log('- SUPABASE_SERVICE_ROLE_KEY exists:', !!serviceKey);
+    console.log('- Service key length:', serviceKey?.length || 0);
+    
+    if (!supabaseUrl || !serviceKey) {
+      throw new Error('Missing required environment variables');
+    }
+    
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    
+    console.log('Supabase client created successfully');
     
     // Check if user exists
-    const { data: existing } = await supabase
+    console.log('Checking if user exists...');
+    const { data: existing, error: checkError } = await supabase
       .from('profiles')
       .select('email')
       .eq('email', email)
       .maybeSingle();
       
+    console.log('User check result:', { existing, checkError });
+      
     if (existing) {
+      console.log('User already exists, returning error');
       return new Response(
         JSON.stringify({ error: 'User already exists' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Create user
+    // Create user with admin API
+    console.log('Creating user with admin API...');
     const { data: user, error } = await supabase.auth.admin.createUser({
       email,
       email_confirm: true,
       user_metadata: { full_name, role, region: region || '' },
     });
 
-    if (error) throw error;
+    console.log('User creation result:', { user: user?.user?.id, error });
+
+    if (error) {
+      console.error('User creation failed:', error);
+      throw error;
+    }
+
+    if (!user?.user?.id) {
+      throw new Error('User creation succeeded but no user ID returned');
+    }
 
     // Create profile
+    console.log('Creating profile for user:', user.user.id);
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
-        user_id: user.user!.id,
+        user_id: user.user.id,
         email,
         full_name,
         role,
@@ -54,13 +88,17 @@ serve(async (req) => {
         status: 'active',
       });
 
+    console.log('Profile creation result:', { profileError });
+
     if (profileError) {
-      await supabase.auth.admin.deleteUser(user.user!.id);
+      console.error('Profile creation failed, cleaning up user:', profileError);
+      await supabase.auth.admin.deleteUser(user.user.id);
       throw profileError;
     }
 
+    console.log('User and profile created successfully');
     return new Response(
-      JSON.stringify({ success: true, user_id: user.user!.id }),
+      JSON.stringify({ success: true, user_id: user.user.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
