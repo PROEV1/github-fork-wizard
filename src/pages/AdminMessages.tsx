@@ -33,21 +33,33 @@ export default function AdminMessages() {
 
   const loadClients = async () => {
     try {
-      // Get clients who have sent messages
-      const { data, error } = await supabase
+      // First get all client IDs who have sent messages
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .not('sender_id', 'is', null);
+
+      if (messageError) throw messageError;
+
+      // Get unique sender IDs
+      const senderIds = [...new Set(messageData?.map(m => m.sender_id) || [])];
+
+      if (senderIds.length === 0) {
+        setClients([]);
+        setLoading(false);
+        return;
+      }
+
+      // Now get clients whose user_id matches any of the sender IDs
+      const { data: clientData, error: clientError } = await supabase
         .from('clients')
-        .select(`
-          id, 
-          full_name, 
-          email,
-          user_id,
-          messages!inner(id)
-        `)
+        .select('id, full_name, email, user_id')
+        .in('user_id', senderIds)
         .order('full_name');
 
-      if (error) throw error;
+      if (clientError) throw clientError;
 
-      setClients(data || []);
+      setClients(clientData || []);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast({
