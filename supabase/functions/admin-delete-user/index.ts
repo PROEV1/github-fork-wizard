@@ -82,13 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Prevent deletion of admin users (safety measure)
-    if (userToDelete.role === 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Cannot delete admin users' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Note: Admin deletion is allowed but requires additional confirmation in the UI
 
     // Log the deletion action before actually deleting
     await supabaseAdmin.rpc('log_user_action', {

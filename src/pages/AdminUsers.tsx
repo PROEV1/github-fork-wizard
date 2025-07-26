@@ -91,13 +91,23 @@ export default function AdminUsers() {
     }
   };
 
-  const handleDeleteUser = async (userId: string, userName: string) => {
+  const handleDeleteUser = async (userId: string, userName: string, userRole: string) => {
     if (!canDeleteUsers) {
       toast.error('You do not have permission to delete users');
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone and will remove the user from the system completely.`)) {
+    // Extra confirmation for admin users
+    const confirmationMessage = userRole === 'admin' 
+      ? `⚠️ WARNING: You are about to delete an ADMIN user (${userName}). This is a high-risk action that will remove all administrative access for this user. Are you absolutely sure you want to proceed?`
+      : `Are you sure you want to delete ${userName}? This action cannot be undone and will remove the user from the system completely.`;
+
+    if (!confirm(confirmationMessage)) {
+      return;
+    }
+
+    // Double confirmation for admin users
+    if (userRole === 'admin' && !confirm('This is your final confirmation. Delete admin user?')) {
       return;
     }
 
@@ -288,9 +298,9 @@ export default function AdminUsers() {
                         >
                           {user.status === 'active' ? 'Deactivate' : 'Activate'}
                         </DropdownMenuItem>
-                        {canDeleteUsers && user.role !== 'admin' && (
+                        {canDeleteUsers && (
                           <DropdownMenuItem 
-                            onClick={() => handleDeleteUser(user.user_id, user.full_name || user.email)}
+                            onClick={() => handleDeleteUser(user.user_id, user.full_name || user.email, user.role)}
                             className="text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
