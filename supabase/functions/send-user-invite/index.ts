@@ -1,9 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface InviteRequest {
+  email: string;
+  full_name?: string;
+  role: 'admin' | 'client' | 'engineer' | 'manager' | 'standard_office_user';
+  region?: string;
+}
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
@@ -11,85 +19,108 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log('Function started');
-
-    // Test 1: Basic function execution
-    const body = await req.json();
-    console.log('Request body:', body);
-
-    // Test 2: Check environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const resendKey = Deno.env.get('RESEND_API_KEY');
+    console.log('Starting user invitation process...');
     
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasResendKey: !!resendKey,
-      supabaseUrl: supabaseUrl ? 'configured' : 'missing',
-      resendKeyLength: resendKey ? resendKey.length : 0
-    });
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
 
-    if (!resendKey) {
-      console.error('RESEND_API_KEY is missing from environment variables');
+    const { email, full_name, role, region }: InviteRequest = await req.json();
+    console.log('Request data:', { email, role });
+
+    if (!email || !role) {
       return new Response(
-        JSON.stringify({ 
-          error: 'RESEND_API_KEY not configured',
-          debug: 'Environment variable missing - please check Supabase Edge Function secrets',
-          hasKey: false
-        }),
+        JSON.stringify({ error: 'Email and role are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Test 3: Try to import and initialize Resend
-    console.log('Attempting to import Resend...');
-    const { Resend } = await import("npm:resend@2.0.0");
-    console.log('Resend imported successfully');
-    
-    const resend = new Resend(resendKey);
-    console.log('Resend initialized successfully');
+    // Check if user already exists
+    const { data: existingUser } = await supabaseClient
+      .from('profiles')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
 
-    // Test 4: Try to send a simple email
-    console.log('Attempting to send test email...');
-    const emailResult = await resend.emails.send({
-      from: 'ProSpaces <onboarding@resend.dev>',
-      to: [body.email || 'test@example.com'],
-      subject: 'Test Email from ProSpaces',
-      html: '<p>This is a test email to verify the Resend integration is working.</p>',
-    });
-
-    console.log('Email result:', emailResult);
-
-    if (emailResult.error) {
+    if (existingUser) {
+      console.log('User already exists:', email);
       return new Response(
-        JSON.stringify({ 
-          error: 'Email sending failed',
-          resendError: emailResult.error,
-          debug: 'Resend API returned error'
-        }),
+        JSON.stringify({ error: `User with email ${email} already exists` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Generate invite token for the invitation URL
+    const inviteToken = crypto.randomUUID();
+    
+    // Create the user with Supabase Auth (using built-in email system temporarily)
+    const { data: authData, error: authError } = await supabaseClient.auth.admin.inviteUserByEmail(email, {
+      data: {
+        full_name: full_name || '',
+        role: role,
+        region: region || null,
+        invite_token: inviteToken,
+      },
+      redirectTo: 'https://preview--pro-spaces-client-portal.lovable.app/auth'
+    });
+
+    if (authError) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create user invitation' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Update the profile with additional information
+    if (authData.user) {
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .update({
+          full_name: full_name || null,
+          role: role,
+          region: region || null,
+          status: 'active',
+          invited_at: new Date().toISOString(),
+          invite_token: inviteToken,
+        })
+        .eq('user_id', authData.user.id);
+
+      if (profileError) {
+        console.error('Profile update error:', profileError);
+      }
+
+      // Log the invitation
+      await supabaseClient.rpc('log_user_action', {
+        p_action_type: 'user_invited',
+        p_target_user_id: authData.user.id,
+        p_details: {
+          email: email,
+          role: role,
+          region: region,
+          invited_by: 'admin',
+          method: 'supabase_builtin'
+        }
+      });
+    }
+
+    console.log('User invitation sent successfully:', { email, role });
 
     return new Response(
       JSON.stringify({ 
-        success: true,
-        message: 'Test email sent successfully',
-        emailId: emailResult.data?.id,
-        debug: 'All systems working'
+        success: true, 
+        message: 'User invitation sent successfully (using Supabase built-in email)',
+        user_id: authData.user?.id,
+        note: 'Using temporary Supabase email system while Resend is being configured'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Function error:', error);
-    
+    console.error('Error in send-user-invite function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Function failed',
-        message: error.message,
-        stack: error.stack,
-        debug: 'Caught in main try/catch'
-      }),
+      JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
