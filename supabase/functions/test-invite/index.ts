@@ -11,45 +11,32 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('=== FUNCTION START ===');
+  
   try {
-    console.log('=== USER INVITATION START ===');
-    
+    // First, let's just parse the body and log it
+    console.log('Parsing request body...');
     const body = await req.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
+    console.log('Body received:', JSON.stringify(body, null, 2));
+    
     const { email, full_name, role, region } = body;
+    console.log('Extracted fields:', { email, full_name, role, region });
     
-    // Validate required fields
-    if (!email || !full_name || !role) {
-      console.error('Missing required fields:', { email: !!email, full_name: !!full_name, role: !!role });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing required fields: email, full_name, and role are required',
-          success: false
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-    
-    // Get environment variables
-    console.log('Checking environment variables...');
+    // Check environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const resendKey = Deno.env.get('RESEND_API_KEY');
     
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasSupabaseKey: !!supabaseKey,
-      hasResendKey: !!resendKey
-    });
+    console.log('Environment variables check:');
+    console.log('- SUPABASE_URL:', supabaseUrl ? 'present' : 'MISSING');
+    console.log('- SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? 'present' : 'MISSING');
+    console.log('- RESEND_API_KEY:', resendKey ? 'present' : 'MISSING');
     
     if (!supabaseUrl || !supabaseKey || !resendKey) {
-      console.error('Missing environment variables');
+      console.error('Missing required environment variables');
       return new Response(
         JSON.stringify({ 
-          error: 'Server configuration error: Missing environment variables',
+          error: 'Missing required environment variables',
           success: false
         }),
         { 
@@ -59,23 +46,47 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     
-    // Initialize Supabase client
-    console.log('Initializing Supabase client...');
+    // Try to create Supabase client
+    console.log('Creating Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('Supabase client created successfully');
     
-    // Check if user already exists in profiles
-    console.log('Checking if user already exists in profiles...');
-    const { data: existingProfile, error: profileCheckError } = await supabase
+    // Test a simple query first
+    console.log('Testing database connection...');
+    const { data: testQuery, error: testError } = await supabase
       .from('profiles')
-      .select('email, user_id')
+      .select('count')
+      .limit(1);
+      
+    if (testError) {
+      console.error('Database connection test failed:', testError);
+      return new Response(
+        JSON.stringify({ 
+          error: `Database connection failed: ${testError.message}`,
+          success: false
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    console.log('Database connection successful');
+    
+    // Check if user already exists
+    console.log('Checking for existing user...');
+    const { data: existingUser, error: userCheckError } = await supabase
+      .from('profiles')
+      .select('email')
       .eq('email', email)
       .maybeSingle();
-    
-    if (profileCheckError) {
-      console.error('Error checking existing profile:', profileCheckError);
+      
+    if (userCheckError) {
+      console.error('User check error:', userCheckError);
       return new Response(
         JSON.stringify({ 
-          error: 'Database error while checking existing user',
+          error: `User check failed: ${userCheckError.message}`,
           success: false
         }),
         { 
@@ -85,11 +96,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     
-    if (existingProfile) {
-      console.log('User already exists in profiles:', existingProfile.email);
+    if (existingUser) {
+      console.log('User already exists:', existingUser.email);
       return new Response(
         JSON.stringify({ 
-          error: `User with email ${email} already exists in the system`,
+          error: `User with email ${email} already exists`,
           success: false
         }),
         { 
@@ -98,133 +109,44 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
-
-    // Create user in auth
-    console.log('Creating user in auth...');
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { full_name, role, region: region || '' },
-    });
-
-    if (authError) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ 
-          error: `Failed to create user: ${authError.message}`,
-          success: false
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    console.log('User created in auth:', authData.user?.id);
-
-    // Create profile record
-    console.log('Creating profile...');
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        user_id: authData.user!.id,
-        email,
-        full_name,
-        role,
-        region: region || '',
-        status: 'active',
-      });
-
-    if (profileError) {
-      console.error('Profile error:', profileError);
-      // Clean up auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authData.user!.id);
-      return new Response(
-        JSON.stringify({ 
-          error: `Failed to create user profile: ${profileError.message}`,
-          success: false
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    console.log('Profile created successfully');
-
-    // Send invitation email
-    console.log('Sending email via Resend...');
-    const emailResponse = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'ProSpaces Portal <info@prospaces.co.uk>',
-        to: [email],
-        subject: 'Welcome to ProSpaces Portal',
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #333;">Welcome to ProSpaces Portal</h1>
-            <p>Hi ${full_name},</p>
-            <p>You've been invited to join ProSpaces Portal with the role of <strong>${role}</strong>.</p>
-            <p>To get started, please sign in at:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" 
-                 style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Sign In to Portal
-              </a>
-            </div>
-            <p>Your email: <strong>${email}</strong></p>
-            <p>You can set your password when you first sign in.</p>
-            <p>Best regards,<br>ProSpaces Team</p>
-          </div>
-        `,
-      }),
-    });
-
-    const emailResult = await emailResponse.text();
-    console.log('Email response status:', emailResponse.status);
-    console.log('Email response:', emailResult);
     
-    if (emailResponse.status !== 200) {
-      console.error('Email failed:', emailResult);
-      return new Response(
-        JSON.stringify({ 
-          error: `Failed to send invitation email: ${emailResult}`,
-          success: false
-        }),
-        { 
-          status: 500, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    console.log('SUCCESS - User created and email sent');
-
+    console.log('User does not exist, proceeding with creation...');
+    
+    // For now, let's just return success without actually creating the user
+    // This will help us isolate if the issue is in the user creation or elsewhere
+    console.log('=== FUNCTION COMPLETED SUCCESSFULLY ===');
+    
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'User invited successfully',
-        user_id: authData.user!.id
+        message: 'Test completed successfully - user creation disabled for testing',
+        debug: {
+          email,
+          full_name,
+          role,
+          region,
+          hasResendKey: !!resendKey
+        }
       }),
       { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
-
+    
   } catch (error: any) {
-    console.error('Function error:', error);
+    console.error('=== FUNCTION ERROR ===');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
+    console.error('Full error object:', error);
+    
     return new Response(
       JSON.stringify({ 
-        error: `Internal server error: ${error.message}`,
-        success: false
+        error: `Function error: ${error.message}`,
+        success: false,
+        errorType: typeof error,
+        stack: error.stack
       }),
       { 
         status: 500, 
