@@ -18,14 +18,27 @@ export function useUserRole() {
       }
 
       try {
+        console.log('useUserRole: Fetching role for user ID:', user.id);
         const { data, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
-        setRole(data.role as UserRole);
+        console.log('useUserRole: Query result:', { data, error });
+
+        if (error) {
+          console.error('useUserRole: Database error:', error);
+          throw error;
+        }
+        
+        if (data) {
+          console.log('useUserRole: Setting role to:', data.role);
+          setRole(data.role as UserRole);
+        } else {
+          console.log('useUserRole: No profile found, setting role to null');
+          setRole(null);
+        }
       } catch (error) {
         console.error('Error fetching user role:', error);
         setRole(null);
