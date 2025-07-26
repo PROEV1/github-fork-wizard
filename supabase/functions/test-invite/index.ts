@@ -39,7 +39,16 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (existingProfile) {
       console.log('User already exists:', existingProfile.email);
-      throw new Error(`User with email ${email} already exists in the system`);
+      return new Response(
+        JSON.stringify({ 
+          error: `User with email ${email} already exists in the system`,
+          success: false
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
     
     // Create user in auth
