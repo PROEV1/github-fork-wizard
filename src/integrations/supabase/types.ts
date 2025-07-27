@@ -1125,6 +1125,14 @@ export type Database = {
         Args: { order_row: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: Database["public"]["Enums"]["order_status_enhanced"]
       }
+      get_engineer_assigned_client_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      get_engineer_assigned_quote_ids: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       get_user_assigned_jobs_count: {
         Args: { user_id: string }
         Returns: number
