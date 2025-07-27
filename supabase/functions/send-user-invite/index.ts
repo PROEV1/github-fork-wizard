@@ -92,23 +92,161 @@ const handler = async (req: Request): Promise<Response> => {
     const emailPayload = {
       from: 'ProSpaces Portal <info@portal.prospaces.co.uk>',
       to: [email],
-      subject: 'Welcome to ProSpaces Portal',
+      subject: 'Welcome to ProSpaces Portal - Your Account is Ready!',
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #333;">Welcome to ProSpaces Portal</h1>
-          <p>Hi ${full_name},</p>
-          <p>You've been invited to join ProSpaces Portal with the role of <strong>${role}</strong>.</p>
-          <p>To get started, please sign in at:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" 
-               style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-              Sign In to Portal
-            </a>
-          </div>
-          <p>Your email: <strong>${email}</strong></p>
-          <p>You can set your password when you first sign in.</p>
-          <p>Best regards,<br>ProSpaces Team</p>
-        </div>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Welcome to ProSpaces Portal</title>
+          <!--[if mso]>
+          <noscript>
+            <xml>
+              <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+              </o:OfficeDocumentSettings>
+            </xml>
+          </noscript>
+          <![endif]-->
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td align="center" style="padding: 20px 0;">
+                <!-- Main Container -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                  
+                  <!-- Header with Logo -->
+                  <tr>
+                    <td align="center" style="padding: 40px 40px 20px 40px; background: linear-gradient(135deg, hsl(178, 33%, 69%) 0%, hsl(178, 33%, 79%) 100%); border-radius: 12px 12px 0 0;">
+                      <img src="https://preview--pro-spaces-client-portal.lovable.app/lovable-uploads/97d9570a-a316-4ac2-8def-5eeab6670140.png" 
+                           alt="ProSpaces Logo" 
+                           width="180" 
+                           height="auto" 
+                           style="display: block; max-width: 180px; height: auto;">
+                    </td>
+                  </tr>
+                  
+                  <!-- Welcome Section -->
+                  <tr>
+                    <td style="padding: 40px 40px 0 40px;">
+                      <h1 style="margin: 0 0 20px 0; font-size: 28px; font-weight: 700; color: hsl(221, 20%, 20%); text-align: center; line-height: 1.2;">
+                        Welcome to ProSpaces Portal
+                      </h1>
+                      <p style="margin: 0 0 20px 0; font-size: 18px; color: hsl(221, 20%, 30%); text-align: center; line-height: 1.4;">
+                        Hi <strong>${full_name}</strong>,
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content Section -->
+                  <tr>
+                    <td style="padding: 0 40px;">
+                      <div style="background-color: hsl(44, 39%, 95%); border-left: 4px solid hsl(178, 33%, 69%); padding: 20px; margin: 20px 0; border-radius: 8px;">
+                        <p style="margin: 0; font-size: 16px; color: hsl(221, 20%, 30%); line-height: 1.5;">
+                          You've been invited to join ProSpaces Portal with the role of <strong style="color: hsl(178, 33%, 40%);">${role}</strong>${region ? ` in the <strong>${region}</strong> region` : ''}.
+                        </p>
+                      </div>
+                      
+                      <p style="margin: 20px 0; font-size: 16px; color: hsl(221, 20%, 30%); line-height: 1.5; text-align: center;">
+                        Your account is ready! Click the button below to sign in and get started.
+                      </p>
+                    </td>
+                  </tr>
+                  
+                  <!-- CTA Button -->
+                  <tr>
+                    <td align="center" style="padding: 30px 40px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td style="background: linear-gradient(135deg, hsl(178, 33%, 69%) 0%, hsl(178, 33%, 59%) 100%); border-radius: 8px; box-shadow: 0 4px 12px hsla(178, 33%, 69%, 0.3);">
+                            <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" 
+                               style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px; transition: all 0.3s ease;">
+                              🚀 Sign In to Your Portal
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Account Details -->
+                  <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                      <div style="background-color: hsl(221, 20%, 98%); border: 1px solid hsl(221, 20%, 92%); border-radius: 8px; padding: 20px;">
+                        <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 600; color: hsl(221, 20%, 30%);">
+                          📧 Your Account Details
+                        </h3>
+                        <p style="margin: 0 0 10px 0; font-size: 14px; color: hsl(221, 20%, 40%);">
+                          <strong>Email:</strong> ${email}
+                        </p>
+                        <p style="margin: 0 0 10px 0; font-size: 14px; color: hsl(221, 20%, 40%);">
+                          <strong>Role:</strong> ${role}
+                        </p>
+                        ${region ? `<p style="margin: 0; font-size: 14px; color: hsl(221, 20%, 40%);"><strong>Region:</strong> ${region}</p>` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!-- What to Expect -->
+                  <tr>
+                    <td style="padding: 0 40px 30px 40px;">
+                      <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; color: hsl(221, 20%, 30%);">
+                        🎯 What to Expect
+                      </h3>
+                      <ul style="margin: 0; padding-left: 20px; color: hsl(221, 20%, 40%); font-size: 14px; line-height: 1.6;">
+                        <li style="margin-bottom: 8px;">Set up your password on first sign-in</li>
+                        <li style="margin-bottom: 8px;">Access your personalized dashboard</li>
+                        <li style="margin-bottom: 8px;">Manage projects and collaborate with your team</li>
+                        <li style="margin-bottom: 0;">Get support from our dedicated team</li>
+                      </ul>
+                    </td>
+                  </tr>
+                  
+                  <!-- Support Section -->
+                  <tr>
+                    <td style="padding: 0 40px 40px 40px;">
+                      <div style="background: linear-gradient(135deg, hsl(328, 36%, 92%) 0%, hsl(328, 36%, 96%) 100%); border-radius: 8px; padding: 20px; text-align: center;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: hsl(221, 20%, 30%);">
+                          💬 Need Help?
+                        </h3>
+                        <p style="margin: 0 0 15px 0; font-size: 14px; color: hsl(221, 20%, 40%);">
+                          Our support team is here to help you get started.
+                        </p>
+                        <a href="mailto:support@prospaces.co.uk" 
+                           style="color: hsl(328, 36%, 50%); text-decoration: none; font-weight: 600; font-size: 14px;">
+                          support@prospaces.co.uk
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="padding: 30px 40px; background-color: hsl(221, 20%, 98%); border-radius: 0 0 12px 12px; border-top: 1px solid hsl(221, 20%, 92%);">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td align="center">
+                            <p style="margin: 0 0 10px 0; font-size: 12px; color: hsl(221, 20%, 50%); line-height: 1.4;">
+                              Best regards,<br>
+                              <strong style="color: hsl(178, 33%, 40%);">The ProSpaces Team</strong>
+                            </p>
+                            <p style="margin: 0; font-size: 11px; color: hsl(221, 20%, 60%); line-height: 1.4;">
+                              This email was sent to ${email}. If you have any questions, please contact our support team.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `,
     };
     
