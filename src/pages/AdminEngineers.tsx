@@ -48,14 +48,32 @@ export default function AdminEngineers() {
     name: '',
     email: '',
     region: '',
-    availability: true
+    availability: true,
+    user_id: null as string | null
   });
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
 
   const { toast } = useToast();
 
   useEffect(() => {
     fetchEngineers();
+    fetchAvailableUsers();
   }, []);
+
+  const fetchAvailableUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .eq('role', 'engineer')
+        .eq('status', 'active');
+
+      if (error) throw error;
+      setAvailableUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching available users:', error);
+    }
+  };
 
   const fetchEngineers = async () => {
     try {
@@ -130,7 +148,8 @@ export default function AdminEngineers() {
             name: formData.name,
             email: formData.email,
             region: formData.region || null,
-            availability: formData.availability
+            availability: formData.availability,
+            user_id: formData.user_id
           })
           .eq('id', editingEngineer.id);
 
@@ -148,7 +167,8 @@ export default function AdminEngineers() {
             name: formData.name,
             email: formData.email,
             region: formData.region || null,
-            availability: formData.availability
+            availability: formData.availability,
+            user_id: formData.user_id
           });
 
         if (error) throw error;
@@ -187,7 +207,8 @@ export default function AdminEngineers() {
       name: '',
       email: '',
       region: '',
-      availability: true
+      availability: true,
+      user_id: null
     });
     setEditingEngineer(null);
     setShowCreateModal(false);
@@ -198,7 +219,8 @@ export default function AdminEngineers() {
       name: engineer.name,
       email: engineer.email,
       region: engineer.region || '',
-      availability: engineer.availability
+      availability: engineer.availability,
+      user_id: engineer.user_id
     });
     setEditingEngineer(engineer);
     setShowCreateModal(true);
@@ -275,15 +297,32 @@ export default function AdminEngineers() {
                   />
                 </div>
                 
-                <div>
-                  <Label htmlFor="region">Region</Label>
-                  <Input
-                    id="region"
-                    value={formData.region}
-                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                    placeholder="Enter region (optional)"
-                  />
-                </div>
+                 <div>
+                   <Label htmlFor="region">Region</Label>
+                   <Input
+                     id="region"
+                     value={formData.region}
+                     onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                     placeholder="Enter region (optional)"
+                   />
+                 </div>
+                 
+                 <div>
+                   <Label htmlFor="user_id">Link to User Account</Label>
+                   <select
+                     id="user_id"
+                     value={formData.user_id || ''}
+                     onChange={(e) => setFormData({ ...formData, user_id: e.target.value || null })}
+                     className="w-full px-3 py-2 border border-input rounded-md"
+                   >
+                     <option value="">Select user account (optional)</option>
+                     {availableUsers.map((user) => (
+                       <option key={user.id} value={user.id}>
+                         {user.full_name} ({user.email})
+                       </option>
+                     ))}
+                   </select>
+                 </div>
                 
                 <div className="flex items-center space-x-2">
                   <input

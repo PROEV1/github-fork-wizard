@@ -26,6 +26,8 @@ import {
   ChevronLeft,
   CheckCircle
 } from 'lucide-react';
+import JobStatusUpdater from '@/components/engineer/JobStatusUpdater';
+import CompletionChecklist from '@/components/engineer/CompletionChecklist';
 
 interface JobDetails {
   id: string;
@@ -77,6 +79,8 @@ export default function EngineerJobDetail() {
   const [signerName, setSignerName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<string[]>([]);
+  const [isChecklistComplete, setIsChecklistComplete] = useState(false);
 
   const uploadTypes = [
     { key: 'pre_install', label: 'Pre-install stair space' },
@@ -268,6 +272,15 @@ export default function EngineerJobDetail() {
       return;
     }
 
+    if (!isChecklistComplete) {
+      toast({
+        title: "Checklist Incomplete",
+        description: "Please complete all checklist items before signing off",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -281,6 +294,22 @@ export default function EngineerJobDetail() {
         .eq('id', jobId);
 
       if (error) throw error;
+
+      // Send completion notification to admins
+      try {
+        await supabase.functions.invoke('send-completion-notification', {
+          body: {
+            orderId: jobId,
+            engineerName: engineerInfo?.name || signerName,
+            orderNumber: job?.order_number,
+            clientName: job?.client.full_name,
+            jobAddress: job?.job_address
+          }
+        });
+      } catch (notificationError) {
+        console.error('Error sending notification:', notificationError);
+        // Don't fail the sign-off if notification fails
+      }
 
       toast({
         title: "Job Signed Off",
@@ -344,6 +373,16 @@ export default function EngineerJobDetail() {
         </div>
 
         <div className="grid gap-6">
+          {/* Job Status Updates */}
+          {!job.engineer_signed_off_at && (
+            <JobStatusUpdater
+              jobId={job.id}
+              currentStatus={job.status}
+              jobAddress={job.job_address}
+              onStatusUpdate={fetchJobDetails}
+            />
+          )}
+
           {/* Client & Order Info */}
           <Card>
             <CardHeader>
@@ -468,6 +507,17 @@ export default function EngineerJobDetail() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Completion Checklist */}
+          {!job.engineer_signed_off_at && (
+            <CompletionChecklist
+              jobId={job.id}
+              onChecklistChange={(items, isComplete) => {
+                setChecklistItems(items);
+                setIsChecklistComplete(isComplete);
+              }}
+            />
           )}
 
           {/* Engineer Notes & Sign-off */}
