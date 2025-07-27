@@ -47,41 +47,8 @@ export default function Auth() {
   }
 
   const checkUserRoleAndRedirect = async () => {
-    try {
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.log('No user found');
-        return;
-      }
-
-      console.log('Checking role for user:', user.id);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      console.log('User profile:', profile);
-      
-      if (profile?.role === 'admin') {
-        console.log('Redirecting admin to /dashboard');
-        navigate('/dashboard', { replace: true });
-      } else if (profile?.role === 'engineer') {
-        console.log('Redirecting engineer to /engineer');
-        navigate('/engineer', { replace: true });
-      } else {
-        console.log('Redirecting client to /client');
-        navigate('/client', { replace: true });
-      }
-    } catch (error) {
-      console.error('Error checking user role:', error);
-      // Default to client if error or no profile found
-      console.log('Error occurred, defaulting to /client');
-      navigate('/client', { replace: true });
-    }
+    console.log('Auth: User authenticated, redirecting to home');
+    navigate('/', { replace: true });
   };
 
 

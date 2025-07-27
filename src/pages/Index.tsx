@@ -2,8 +2,43 @@
 import { Button } from "@/components/ui/button";
 import { ProSpacesLogo } from "@/components/ProSpacesLogo";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { role, loading: roleLoading } = useUserRole();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user is authenticated and we have their role, redirect to appropriate dashboard
+    if (!authLoading && !roleLoading && user && role) {
+      switch (role) {
+        case 'admin':
+          navigate('/dashboard');
+          break;
+        case 'engineer':
+          navigate('/engineer');
+          break;
+        case 'client':
+          navigate('/client');
+          break;
+        default:
+          navigate('/client');
+      }
+    }
+  }, [user, role, authLoading, roleLoading, navigate]);
+
+  // Show landing page for unauthenticated users or while loading
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-teal"></div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
       <div className="text-center max-w-4xl mx-auto p-8">

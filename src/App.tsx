@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Layout from "@/components/Layout";
+import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import Admin from "./pages/Admin";
@@ -70,8 +71,8 @@ const App = () => (
             <Route path="/admin/order/:orderId" element={<Layout><OrderDetail /></Layout>} />
             <Route path="/order/:orderId" element={<Layout><OrderDetail /></Layout>} />
             <Route path="/quote/:shareToken" element={<PublicQuoteView />} />
-            {/* Default route - redirect to client dashboard */}
-            <Route path="/" element={<Navigate to="/client" replace />} />
+            {/* Landing page for unauthenticated users */}
+            <Route path="/" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
