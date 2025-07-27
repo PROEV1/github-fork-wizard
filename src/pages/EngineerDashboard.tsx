@@ -32,10 +32,16 @@ export default function EngineerDashboard() {
 
   useEffect(() => {
     if (user) {
-      fetchEngineerJobs();
       fetchEngineerInfo();
     }
   }, [user]);
+
+  // Separate useEffect to fetch jobs only after engineer info is available
+  useEffect(() => {
+    if (engineerInfo?.id) {
+      fetchEngineerJobs();
+    }
+  }, [engineerInfo?.id]);
 
   const fetchEngineerInfo = async () => {
     try {
