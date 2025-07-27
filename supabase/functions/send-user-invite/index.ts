@@ -120,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <!-- Header with Logo -->
                   <tr>
                     <td align="center" style="padding: 40px 40px 20px 40px; background: linear-gradient(135deg, hsl(178, 33%, 69%) 0%, hsl(178, 33%, 79%) 100%); border-radius: 12px 12px 0 0;">
-                      <img src="https://preview--pro-spaces-client-portal.lovable.app/lovable-uploads/97d9570a-a316-4ac2-8def-5eeab6670140.png" 
+                      <img src="https://preview--pro-spaces-client-portal.lovable.app/lovable-uploads/3add86aa-4857-42e8-9672-5ea09a594bb2.png" 
                            alt="ProSpaces Logo" 
                            width="180" 
                            height="auto" 
