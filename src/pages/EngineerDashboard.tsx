@@ -32,51 +32,108 @@ export default function EngineerDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Enhanced effect with aggressive debugging and forced execution
+  // COMPLETELY NEW APPROACH - Direct fetch without complex conditions
   useEffect(() => {
-    console.log('🔥 EngineerDashboard: useEffect triggered', { 
-      userId: user?.id, 
-      userEmail: user?.email,
-      authLoading, 
-      userObjectStable: !!user 
-    });
-    
-    // Always try to fetch if we have a user ID - remove email requirement
-    if (user?.id && !authLoading) {
-      console.log('🔥 EngineerDashboard: Basic conditions met, forcing data fetch');
-      setDebugInfo({ step: 'forcing_fetch', userId: user.id, email: user.email, timestamp: new Date().toISOString() });
-      
-      // Force fetch with a small delay to ensure DOM is ready
-      setTimeout(() => {
-        console.log('🔥 EngineerDashboard: Executing delayed fetch');
-        fetchEngineerData();
-      }, 100);
-    } else {
-      console.log('🔥 EngineerDashboard: Conditions not met', {
-        hasUserId: !!user?.id,
-        hasUserEmail: !!user?.email,
-        authLoading,
-        userObject: user
-      });
-      setDebugInfo({ 
-        step: 'waiting', 
-        hasUserId: !!user?.id,
-        hasUserEmail: !!user?.email,
-        authLoading,
-        message: 'Waiting for user authentication to complete',
-        timestamp: new Date().toISOString()
-      });
-    }
-  }, [user?.id, authLoading]);
-  
-  // Additional effect to force fetch when component mounts
-  useEffect(() => {
-    console.log('🚀 EngineerDashboard: Component mounted, forcing immediate check');
+    console.log('🔥 DIRECT FETCH: Component mounted or user changed');
     if (user?.id) {
-      console.log('🚀 EngineerDashboard: User exists on mount, forcing fetch');
-      fetchEngineerData();
+      console.log('🔥 DIRECT FETCH: User ID exists, executing immediate fetch');
+      directFetchEngineerJobs();
     }
-  }, []);
+  }, [user]);
+
+  // Simple, direct data fetching function
+  const directFetchEngineerJobs = async () => {
+    console.log('💥 DIRECT FETCH: Starting direct job fetch for user:', user?.id);
+    
+    setLoading(true);
+    setErrorMessage(null);
+    setDebugInfo({ step: 'direct_fetch_starting', userId: user?.id, timestamp: new Date().toISOString() });
+
+    try {
+      // Single query to get all data at once
+      const { data: jobData, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          status_enhanced,
+          job_address,
+          scheduled_install_date,
+          total_amount,
+          engineer_signed_off_at,
+          quote_id,
+          client_id,
+          engineers!inner (
+            id,
+            name,
+            email,
+            region,
+            user_id
+          ),
+          clients (
+            full_name,
+            phone
+          ),
+          quotes (
+            product_details
+          )
+        `)
+        .eq('engineers.user_id', user?.id);
+
+      console.log('💥 DIRECT FETCH: Raw query result:', { jobData, error });
+
+      if (error) {
+        console.error('💥 DIRECT FETCH: Query error:', error);
+        setErrorMessage(`Database error: ${error.message}`);
+        setDebugInfo({ step: 'direct_fetch_error', error: error.message, userId: user?.id });
+        return;
+      }
+
+      if (!jobData || jobData.length === 0) {
+        console.log('💥 DIRECT FETCH: No jobs found for user');
+        setJobs([]);
+        setDebugInfo({ step: 'direct_fetch_no_jobs', userId: user?.id, jobCount: 0 });
+        return;
+      }
+
+      // Set engineer info from first job
+      const firstJob = jobData[0];
+      if (firstJob.engineers) {
+        setEngineerInfo(firstJob.engineers);
+        console.log('💥 DIRECT FETCH: Set engineer info:', firstJob.engineers);
+      }
+
+      // Format jobs
+      const formattedJobs = jobData.map(job => ({
+        id: job.id,
+        order_number: job.order_number,
+        client_name: job.clients?.full_name || 'Unknown Client',
+        client_phone: job.clients?.phone || 'No phone',
+        job_address: job.job_address || 'Address not specified',
+        scheduled_install_date: job.scheduled_install_date,
+        status_enhanced: job.status_enhanced,
+        product_details: job.quotes?.product_details || 'No product details',
+        total_amount: job.total_amount,
+        engineer_signed_off_at: job.engineer_signed_off_at
+      }));
+
+      console.log('💥 DIRECT FETCH: Formatted jobs:', formattedJobs);
+      setJobs(formattedJobs);
+      setDebugInfo({ 
+        step: 'direct_fetch_success', 
+        userId: user?.id, 
+        jobCount: formattedJobs.length,
+        jobs: formattedJobs.map(j => ({ order: j.order_number, client: j.client_name }))
+      });
+
+    } catch (error: any) {
+      console.error('💥 DIRECT FETCH: Unexpected error:', error);
+      setErrorMessage(`Unexpected error: ${error.message}`);
+      setDebugInfo({ step: 'direct_fetch_exception', error: error.message, userId: user?.id });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchEngineerData = async () => {
     try {
@@ -254,13 +311,12 @@ export default function EngineerDashboard() {
 
   // Force refresh function for debugging
   const forceRefresh = () => {
-    console.log('🔄 FORCE REFRESH triggered by user');
-    console.log('🔄 Current state - Jobs:', jobs.length, 'Engineer:', engineerInfo?.name);
+    console.log('🔄 FORCE REFRESH: Manual refresh triggered');
     setJobs([]);
     setEngineerInfo(null);
     setErrorMessage(null);
     setDebugInfo(null);
-    fetchEngineerData();
+    directFetchEngineerJobs(); // Use new direct fetch method
   };
 
 
