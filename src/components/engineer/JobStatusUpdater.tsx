@@ -45,14 +45,22 @@ export default function JobStatusUpdater({
   const updateJobStatus = async (newStatus: string) => {
     setUpdating(true);
     try {
-      // Update both status fields for proper status management
+      // Map engineer statuses to appropriate order statuses
+      let orderStatus = newStatus;
+      if (newStatus === 'on_way' || newStatus === 'in_progress') {
+        orderStatus = 'in_progress';
+      } else if (newStatus === 'completed') {
+        orderStatus = 'engineer_completed';
+      }
+
+      // Update the order with engineer notes to track engineer-specific status
       const { error } = await supabase
         .from('orders')
         .update({ 
-          status: newStatus,
-          status_enhanced: newStatus as any, // This will be recalculated by the trigger
+          status: orderStatus,
           manual_status_override: true,
-          manual_status_notes: `Status updated by engineer to ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`
+          manual_status_notes: `Engineer status: ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`,
+          engineer_notes: `Engineer status updated to: ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`
         })
         .eq('id', jobId);
 
@@ -64,7 +72,8 @@ export default function JobStatusUpdater({
         p_activity_type: 'engineer_status_update',
         p_description: `Engineer updated status to ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`,
         p_details: {
-          new_status: newStatus,
+          engineer_status: newStatus,
+          order_status: orderStatus,
           updated_by_engineer: true
         }
       });
