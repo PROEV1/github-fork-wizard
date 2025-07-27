@@ -20,20 +20,86 @@ export default function SetupPassword() {
   const [searchParams] = useSearchParams();
   
   useEffect(() => {
-    // Check if we have the required tokens from the URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    const type = searchParams.get('type');
+    // Handle Supabase's password recovery flow
+    const handleAuthRecovery = async () => {
+      // Get tokens from URL hash or query params
+      const hash = window.location.hash;
+      const params = new URLSearchParams(window.location.search);
+      
+      // Check for tokens in hash fragment (Supabase's default)
+      if (hash) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
+        
+        if (accessToken && refreshToken && type === 'recovery') {
+          // Set the session using tokens from hash
+          try {
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            
+            if (error) {
+              console.error('Session setup error:', error);
+              toast({
+                title: "Invalid Link",
+                description: "This password setup link is invalid or has expired. Please contact support.",
+                variant: "destructive",
+              });
+              navigate('/auth');
+            }
+          } catch (error) {
+            console.error('Auth recovery error:', error);
+            toast({
+              title: "Invalid Link", 
+              description: "This password setup link is invalid or has expired. Please contact support.",
+              variant: "destructive",
+            });
+            navigate('/auth');
+          }
+          return;
+        }
+      }
+      
+      // Fallback: check query params for legacy support
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      const type = params.get('type');
+      
+      if (accessToken && refreshToken && type === 'recovery') {
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          
+          if (error) {
+            throw error;
+          }
+        } catch (error) {
+          console.error('Auth recovery error:', error);
+          toast({
+            title: "Invalid Link",
+            description: "This password setup link is invalid or has expired. Please contact support.", 
+            variant: "destructive",
+          });
+          navigate('/auth');
+        }
+      } else {
+        // No valid tokens found
+        toast({
+          title: "Invalid Link",
+          description: "This password setup link is invalid or has expired. Please contact support.",
+          variant: "destructive",
+        });
+        navigate('/auth');
+      }
+    };
     
-    if (!accessToken || !refreshToken || type !== 'recovery') {
-      toast({
-        title: "Invalid Link",
-        description: "This password setup link is invalid or has expired. Please contact support.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-    }
-  }, [searchParams, navigate, toast]);
+    handleAuthRecovery();
+  }, [navigate, toast]);
 
   const handleSetupPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,22 +125,11 @@ export default function SetupPassword() {
     setLoading(true);
 
     try {
-      // Use the tokens from URL to update the password
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
+      // Check if user is authenticated from the session setup in useEffect
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (!accessToken || !refreshToken) {
-        throw new Error('Missing authentication tokens');
-      }
-
-      // Set the session using the tokens from the URL
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-
-      if (sessionError) {
-        throw sessionError;
+      if (!session) {
+        throw new Error('No valid session found. Please try clicking the link in your email again.');
       }
 
       // Update the password

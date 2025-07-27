@@ -143,11 +143,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Generate password reset link for the user
+    // Generate password reset link for the user with our custom redirect
     console.log('Generating password reset link for user:', userId);
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
+      options: {
+        redirectTo: 'https://preview--pro-spaces-client-portal.lovable.app/auth/setup-password'
+      }
     });
 
     console.log('Password reset link generation result:', { 
@@ -166,14 +169,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Extract the tokens from the action link and create our custom redirect URL
-    const actionUrl = new URL(resetData.properties.action_link);
-    const accessToken = actionUrl.searchParams.get('access_token');
-    const refreshToken = actionUrl.searchParams.get('refresh_token');
-    const type = actionUrl.searchParams.get('type');
-    
-    const passwordSetupUrl = `https://preview--pro-spaces-client-portal.lovable.app/auth/setup-password?access_token=${accessToken}&refresh_token=${refreshToken}&type=${type}`;
-    console.log('Custom password setup URL generated');
+    // Use the action link directly - Supabase handles the tokens internally
+    const passwordSetupUrl = resetData.properties.action_link;
+    console.log('Password setup URL generated:', passwordSetupUrl);
 
     // Send email using Resend API
     console.log('Sending invitation email to:', email);
