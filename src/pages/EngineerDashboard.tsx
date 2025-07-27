@@ -31,29 +31,12 @@ export default function EngineerDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Main effect to fetch data when user is available
+  // Simplified effect - only fetch when user is authenticated
   useEffect(() => {
-    console.log('🔄 Main useEffect triggered');
-    console.log('Auth loading:', authLoading);
-    console.log('User ID:', user?.id);
-    console.log('User email:', user?.email);
-    
-    // Don't do anything while auth is still loading
-    if (authLoading) {
-      console.log('⏳ Auth still loading, waiting...');
-      return;
+    if (!authLoading && user?.id) {
+      console.log('✅ User authenticated, fetching engineer data for:', user.email);
+      fetchEngineerData();
     }
-    
-    // If auth finished loading but no user, we have a problem
-    if (!user?.id) {
-      console.log('❌ Auth finished but no user ID available');
-      setLoading(false);
-      setErrorMessage('Authentication required. Please log in.');
-      return;
-    }
-
-    console.log('✅ User authenticated, starting data fetch for:', user.email);
-    fetchEngineerData();
   }, [user?.id, authLoading]);
 
   const fetchEngineerData = async () => {
