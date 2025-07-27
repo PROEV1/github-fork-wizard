@@ -45,16 +45,30 @@ export default function EngineerDashboard() {
 
   const fetchEngineerInfo = async () => {
     try {
+      console.log('DEBUG: Fetching engineer info for user ID:', user?.id);
+      
       const { data, error } = await supabase
         .from('engineers')
         .select('*')
         .eq('user_id', user?.id)
         .single();
 
-      if (error) throw error;
+      console.log('DEBUG: Engineer query result:', { data, error });
+
+      if (error) {
+        console.error('DEBUG: Engineer query error:', error);
+        throw error;
+      }
+      
+      console.log('DEBUG: Setting engineer info:', data);
       setEngineerInfo(data);
     } catch (error) {
       console.error('Error fetching engineer info:', error);
+      toast({
+        title: "Error",
+        description: `Failed to load engineer information: ${error.message}`,
+        variant: "destructive",
+      });
     }
   };
 
