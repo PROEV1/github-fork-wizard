@@ -59,16 +59,20 @@ export default function EngineerDashboard() {
   const fetchEngineerData = async () => {
     try {
       console.log('🚀 Starting engineer data fetch for user:', user?.id);
+      console.log('🚀 User email:', user?.email);
+      console.log('🚀 Auth loading state:', authLoading);
       setLoading(true);
       setErrorMessage(null);
 
-      // Step 1: Get engineer info
-      console.log('📋 Step 1: Fetching engineer info...');
+      // Step 1: Get engineer info - force fresh query
+      console.log('📋 Step 1: Fetching engineer info for user_id:', user?.id);
       const { data: engineer, error: engineerError } = await supabase
         .from('engineers')
         .select('*')
         .eq('user_id', user?.id)
         .maybeSingle();
+
+      console.log('🔍 Engineer query result:', { engineer, engineerError });
 
       if (engineerError) {
         console.error('❌ Engineer query error:', engineerError);
@@ -77,14 +81,18 @@ export default function EngineerDashboard() {
 
       if (!engineer) {
         console.error('❌ No engineer record found for user:', user?.id);
+        console.log('📋 Available engineers check - querying all engineers...');
+        const { data: allEngineers } = await supabase.from('engineers').select('*');
+        console.log('📋 All engineers in system:', allEngineers);
         throw new Error('No engineer profile found for your account. Please contact admin.');
       }
 
       console.log('✅ Engineer found:', engineer);
       setEngineerInfo(engineer);
 
-      // Step 2: Get jobs for this engineer
+      // Step 2: Get jobs for this engineer - force fresh query
       console.log('📋 Step 2: Fetching jobs for engineer ID:', engineer.id);
+      console.log('📋 Step 2: Engineer name:', engineer.name);
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select(`
@@ -101,15 +109,23 @@ export default function EngineerDashboard() {
         .eq('engineer_id', engineer.id)
         .order('scheduled_install_date', { ascending: true });
 
+      console.log('🔍 Orders query result:', { orders, ordersError, count: orders?.length });
+
       if (ordersError) {
         console.error('❌ Orders query error:', ordersError);
         throw new Error(`Failed to load jobs: ${ordersError.message}`);
       }
 
-      console.log('✅ Orders query result:', orders);
+      console.log('✅ Raw orders found:', orders?.length || 0);
+      if (orders && orders.length > 0) {
+        console.log('✅ First order sample:', orders[0]);
+      }
 
       if (!orders || orders.length === 0) {
-        console.log('ℹ️ No orders found for engineer');
+        console.log('ℹ️ No orders found for engineer ID:', engineer.id);
+        console.log('📋 DEBUG: Checking all orders in system...');
+        const { data: allOrders } = await supabase.from('orders').select('id, order_number, engineer_id');
+        console.log('📋 All orders in system:', allOrders);
         setJobs([]);
         toast({
           title: "No Jobs Found",
@@ -167,6 +183,7 @@ export default function EngineerDashboard() {
       });
 
       console.log('✅ Final formatted jobs:', formattedJobs);
+      console.log('🎉 Setting jobs state with', formattedJobs.length, 'jobs');
       setJobs(formattedJobs);
       
       toast({
@@ -176,6 +193,7 @@ export default function EngineerDashboard() {
 
     } catch (error: any) {
       console.error('💥 Fatal error in fetchEngineerData:', error);
+      console.error('💥 Error stack:', error.stack);
       const errorMsg = error.message || 'An unexpected error occurred';
       setErrorMessage(errorMsg);
       toast({
@@ -187,6 +205,16 @@ export default function EngineerDashboard() {
       console.log('🏁 fetchEngineerData completed, setting loading to false');
       setLoading(false);
     }
+  };
+
+  // Force refresh function for debugging
+  const forceRefresh = () => {
+    console.log('🔄 FORCE REFRESH triggered by user');
+    console.log('🔄 Current state - Jobs:', jobs.length, 'Engineer:', engineerInfo?.name);
+    setJobs([]);
+    setEngineerInfo(null);
+    setErrorMessage(null);
+    fetchEngineerData();
   };
 
 
@@ -226,9 +254,14 @@ export default function EngineerDashboard() {
             <div className="bg-destructive/10 text-destructive p-6 rounded-lg max-w-md mx-auto">
               <h2 className="text-lg font-semibold mb-2">Unable to Load Dashboard</h2>
               <p className="text-sm mb-4">{errorMessage}</p>
-              <Button onClick={() => window.location.reload()} variant="outline">
-                Retry
-              </Button>
+              <div className="space-x-2">
+                <Button onClick={fetchEngineerData} variant="outline">
+                  Try Again
+                </Button>
+                <Button onClick={forceRefresh} variant="outline">
+                  Force Refresh
+                </Button>
+              </div>
             </div>
           </div>
         </BrandContainer>
@@ -240,12 +273,19 @@ export default function EngineerDashboard() {
     <BrandPage>
       <BrandContainer>
         <div className="mb-8">
-          <BrandHeading1>Engineer Dashboard</BrandHeading1>
-          {engineerInfo && (
-            <p className="text-muted-foreground mt-2">
-              Welcome back, {engineerInfo.name} • {engineerInfo.region && `Region: ${engineerInfo.region}`}
-            </p>
-          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <BrandHeading1>Engineer Dashboard</BrandHeading1>
+              {engineerInfo && (
+                <p className="text-muted-foreground mt-2">
+                  Welcome back, {engineerInfo.name} • {engineerInfo.region && `Region: ${engineerInfo.region}`}
+                </p>
+              )}
+            </div>
+            <Button onClick={forceRefresh} variant="outline" size="sm">
+              🔄 Refresh Data
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6">
