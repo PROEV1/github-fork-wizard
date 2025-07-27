@@ -27,17 +27,41 @@ export default function EngineerDashboard() {
   const [loading, setLoading] = useState(true);
   const [engineerInfo, setEngineerInfo] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Simplified effect - only fetch when user is authenticated
+  // Enhanced effect with better timing and debugging
   useEffect(() => {
-    if (!authLoading && user?.id) {
-      console.log('✅ User authenticated, fetching engineer data for:', user.email);
+    console.log('EngineerDashboard: useEffect triggered', { 
+      userId: user?.id, 
+      userEmail: user?.email,
+      authLoading, 
+      userObjectStable: !!user 
+    });
+    
+    // Only fetch data if user is fully authenticated and stable
+    if (user?.id && !authLoading && user?.email) {
+      console.log('EngineerDashboard: Conditions met, fetching engineer data');
+      setDebugInfo({ step: 'starting', userId: user.id, email: user.email });
       fetchEngineerData();
+    } else {
+      console.log('EngineerDashboard: Conditions not met', {
+        hasUserId: !!user?.id,
+        hasUserEmail: !!user?.email,
+        authLoading,
+        userObject: user
+      });
+      setDebugInfo({ 
+        step: 'waiting', 
+        hasUserId: !!user?.id,
+        hasUserEmail: !!user?.email,
+        authLoading,
+        message: 'Waiting for user authentication to complete'
+      });
     }
-  }, [user?.id, authLoading]);
+  }, [user?.id, user?.email, authLoading]);
 
   const fetchEngineerData = async () => {
     try {
@@ -168,6 +192,16 @@ export default function EngineerDashboard() {
       console.log('✅ Final formatted jobs:', formattedJobs);
       console.log('🎉 Setting jobs state with', formattedJobs.length, 'jobs');
       setJobs(formattedJobs);
+      setDebugInfo({ 
+        step: 'success', 
+        engineerId: engineer.id, 
+        engineerName: engineer.name,
+        ordersCount: orders.length,
+        jobsCount: formattedJobs.length,
+        userId: user?.id,
+        userEmail: user?.email,
+        success: true
+      });
       
       toast({
         title: "Jobs Loaded Successfully",
@@ -179,6 +213,13 @@ export default function EngineerDashboard() {
       console.error('💥 Error stack:', error.stack);
       const errorMsg = error.message || 'An unexpected error occurred';
       setErrorMessage(errorMsg);
+      setDebugInfo({ 
+        step: 'error', 
+        error: error.message, 
+        userId: user?.id,
+        userEmail: user?.email,
+        stack: error.stack
+      });
       toast({
         title: "Error Loading Dashboard",
         description: errorMsg,
@@ -197,6 +238,7 @@ export default function EngineerDashboard() {
     setJobs([]);
     setEngineerInfo(null);
     setErrorMessage(null);
+    setDebugInfo(null);
     fetchEngineerData();
   };
 
@@ -258,6 +300,14 @@ export default function EngineerDashboard() {
                 <p className="text-muted-foreground mt-2">
                   Welcome back, {engineerInfo.name} • {engineerInfo.region && `Region: ${engineerInfo.region}`}
                 </p>
+              )}
+              {debugInfo && (
+                <div className="bg-blue-50 p-3 rounded-lg mt-2 text-sm">
+                  <details>
+                    <summary className="cursor-pointer font-semibold text-blue-700">Debug Info (Click to expand)</summary>
+                    <pre className="mt-2 whitespace-pre-wrap text-xs text-blue-600">{JSON.stringify(debugInfo, null, 2)}</pre>
+                  </details>
+                </div>
               )}
             </div>
             <Button onClick={forceRefresh} variant="outline" size="sm">

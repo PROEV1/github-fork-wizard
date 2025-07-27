@@ -21,12 +21,14 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !authLoading) {
-      // Small delay to ensure auth state has stabilized
+      console.log('Auth: User authenticated, preparing redirect', { userId: user.id, email: user.email });
+      // Increased delay to ensure auth state has stabilized
       setTimeout(() => {
-        checkUserRoleAndRedirect();
-      }, 200);
+        console.log('Auth: Executing redirect to home');
+        navigate('/', { replace: true });
+      }, 500);
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, navigate]);
 
   // Show loading while auth is checking
   if (authLoading) {
@@ -46,10 +48,6 @@ export default function Auth() {
     );
   }
 
-  const checkUserRoleAndRedirect = async () => {
-    console.log('Auth: User authenticated, redirecting to home');
-    navigate('/', { replace: true });
-  };
 
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -118,10 +116,12 @@ export default function Auth() {
           description: "Signed in successfully",
         });
         
-        // Check user role and redirect
+        // Force navigation after successful login
+        console.log('Auth: Login successful, user data:', data.user);
         setTimeout(() => {
-          checkUserRoleAndRedirect();
-        }, 100);
+          console.log('Auth: Forcing navigation to home');
+          navigate('/', { replace: true });
+        }, 300);
       }
     } catch (error) {
       toast({

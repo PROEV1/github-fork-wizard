@@ -13,31 +13,52 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Index: Auth state check', { 
+      user: user?.id, 
+      role, 
+      authLoading, 
+      roleLoading 
+    });
+    
     // If user is authenticated and we have their role, redirect to appropriate dashboard
     if (!authLoading && !roleLoading && user && role) {
+      console.log('Index: All data loaded, redirecting based on role:', role);
       switch (role) {
         case 'admin':
+          console.log('Index: Redirecting admin to dashboard');
           navigate('/dashboard');
           break;
         case 'engineer':
+          console.log('Index: Redirecting engineer to engineer dashboard');
           navigate('/engineer');
           break;
         case 'client':
+          console.log('Index: Redirecting client to client dashboard');
           navigate('/client');
           break;
         default:
+          console.log('Index: Unknown role, defaulting to client dashboard');
           navigate('/client');
       }
+    } else if (!authLoading && !roleLoading && user && !role) {
+      console.log('Index: User authenticated but no role found, defaulting to client');
+      navigate('/client');
     }
   }, [user, role, authLoading, roleLoading, navigate]);
 
   // Show landing page for unauthenticated users or while loading
   if (authLoading || roleLoading) {
+    console.log('Index: Still loading', { authLoading, roleLoading });
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-teal"></div>
       </div>
     );
+  }
+  
+  // If user is authenticated but we're still here, something went wrong with redirect
+  if (user) {
+    console.log('Index: User authenticated but still on landing page', { user: user.id, role });
   }
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
