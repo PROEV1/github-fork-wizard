@@ -26,63 +26,54 @@ export default function EngineerDashboard() {
   const [jobs, setJobs] = useState<EngineerJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [engineerInfo, setEngineerInfo] = useState<any>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Main effect to fetch data when user is available
   useEffect(() => {
-    if (user) {
-      fetchEngineerInfo();
-    }
-  }, [user]);
-
-  // Separate useEffect to fetch jobs only after engineer info is available
-  useEffect(() => {
-    if (engineerInfo?.id) {
-      fetchEngineerJobs();
-    }
-  }, [engineerInfo?.id]);
-
-  const fetchEngineerInfo = async () => {
-    try {
-      console.log('DEBUG: Fetching engineer info for user ID:', user?.id);
-      
-      const { data, error } = await supabase
-        .from('engineers')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      console.log('DEBUG: Engineer query result:', { data, error });
-
-      if (error) {
-        console.error('DEBUG: Engineer query error:', error);
-        throw error;
-      }
-      
-      console.log('DEBUG: Setting engineer info:', data);
-      setEngineerInfo(data);
-    } catch (error) {
-      console.error('Error fetching engineer info:', error);
-      toast({
-        title: "Error",
-        description: `Failed to load engineer information: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const fetchEngineerJobs = async () => {
-    if (!engineerInfo?.id) {
-      console.log('Engineer ID not available yet, skipping job fetch');
+    console.log('🔄 Main useEffect triggered - User:', user?.id, 'Loading:', loading);
+    
+    if (!user?.id) {
+      console.log('❌ No user ID available, staying in loading state');
       return;
     }
 
+    console.log('✅ User ID available, starting data fetch');
+    fetchEngineerData();
+  }, [user?.id]);
+
+  const fetchEngineerData = async () => {
     try {
-      console.log('Fetching jobs for engineer ID:', engineerInfo.id);
-      
-      // Simplified query - fetch orders first, then get related data
-      const { data: ordersData, error: ordersError } = await supabase
+      console.log('🚀 Starting engineer data fetch for user:', user?.id);
+      setLoading(true);
+      setErrorMessage(null);
+
+      // Step 1: Get engineer info
+      console.log('📋 Step 1: Fetching engineer info...');
+      const { data: engineer, error: engineerError } = await supabase
+        .from('engineers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (engineerError) {
+        console.error('❌ Engineer query error:', engineerError);
+        throw new Error(`Engineer lookup failed: ${engineerError.message}`);
+      }
+
+      if (!engineer) {
+        console.error('❌ No engineer record found for user:', user?.id);
+        throw new Error('No engineer profile found for your account. Please contact admin.');
+      }
+
+      console.log('✅ Engineer found:', engineer);
+      setEngineerInfo(engineer);
+
+      // Step 2: Get jobs for this engineer
+      console.log('📋 Step 2: Fetching jobs for engineer ID:', engineer.id);
+      const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select(`
           id,
@@ -95,25 +86,30 @@ export default function EngineerDashboard() {
           quote_id,
           client_id
         `)
-        .eq('engineer_id', engineerInfo.id)
+        .eq('engineer_id', engineer.id)
         .order('scheduled_install_date', { ascending: true });
 
       if (ordersError) {
-        console.error('Orders query error:', ordersError);
-        throw ordersError;
+        console.error('❌ Orders query error:', ordersError);
+        throw new Error(`Failed to load jobs: ${ordersError.message}`);
       }
 
-      console.log('Orders data:', ordersData);
+      console.log('✅ Orders query result:', orders);
 
-      if (!ordersData || ordersData.length === 0) {
-        console.log('No orders found for engineer');
+      if (!orders || orders.length === 0) {
+        console.log('ℹ️ No orders found for engineer');
         setJobs([]);
+        toast({
+          title: "No Jobs Found",
+          description: "You don't have any assigned jobs at the moment.",
+        });
         return;
       }
 
-      // Get quote and client data separately
-      const quoteIds = ordersData.map(order => order.quote_id);
-      const clientIds = ordersData.map(order => order.client_id);
+      // Step 3: Get related data
+      console.log('📋 Step 3: Fetching quotes and clients for', orders.length, 'orders');
+      const quoteIds = orders.map(order => order.quote_id);
+      const clientIds = orders.map(order => order.client_id);
 
       const [quotesResult, clientsResult] = await Promise.all([
         supabase
@@ -127,20 +123,20 @@ export default function EngineerDashboard() {
       ]);
 
       if (quotesResult.error) {
-        console.error('Quotes query error:', quotesResult.error);
-        throw quotesResult.error;
+        console.error('❌ Quotes query error:', quotesResult.error);
+        throw new Error(`Failed to load quote details: ${quotesResult.error.message}`);
       }
 
       if (clientsResult.error) {
-        console.error('Clients query error:', clientsResult.error);
-        throw clientsResult.error;
+        console.error('❌ Clients query error:', clientsResult.error);
+        throw new Error(`Failed to load client details: ${clientsResult.error.message}`);
       }
 
-      console.log('Quotes data:', quotesResult.data);
-      console.log('Clients data:', clientsResult.data);
+      console.log('✅ Quotes:', quotesResult.data);
+      console.log('✅ Clients:', clientsResult.data);
 
-      // Manual join of the data
-      const formattedJobs = ordersData.map(order => {
+      // Step 4: Format and combine data
+      const formattedJobs = orders.map(order => {
         const quote = quotesResult.data?.find(q => q.id === order.quote_id);
         const client = clientsResult.data?.find(c => c.id === order.client_id);
 
@@ -158,24 +154,29 @@ export default function EngineerDashboard() {
         };
       });
 
-      console.log('Formatted jobs:', formattedJobs);
+      console.log('✅ Final formatted jobs:', formattedJobs);
       setJobs(formattedJobs);
       
       toast({
-        title: "Jobs Loaded",
+        title: "Jobs Loaded Successfully",
         description: `Found ${formattedJobs.length} assigned job${formattedJobs.length === 1 ? '' : 's'}`,
       });
-    } catch (error) {
-      console.error('Error fetching engineer jobs:', error);
+
+    } catch (error: any) {
+      console.error('💥 Fatal error in fetchEngineerData:', error);
+      const errorMsg = error.message || 'An unexpected error occurred';
+      setErrorMessage(errorMsg);
       toast({
-        title: "Error",
-        description: `Failed to load your assigned jobs: ${error.message}`,
+        title: "Error Loading Dashboard",
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
+      console.log('🏁 fetchEngineerData completed, setting loading to false');
       setLoading(false);
     }
   };
+
 
   const getStatusBadge = (status: string, signedOff: string | null) => {
     if (signedOff) {
@@ -204,6 +205,24 @@ export default function EngineerDashboard() {
   };
 
   if (loading) return <BrandLoading />;
+
+  if (errorMessage) {
+    return (
+      <BrandPage>
+        <BrandContainer>
+          <div className="text-center py-12">
+            <div className="bg-destructive/10 text-destructive p-6 rounded-lg max-w-md mx-auto">
+              <h2 className="text-lg font-semibold mb-2">Unable to Load Dashboard</h2>
+              <p className="text-sm mb-4">{errorMessage}</p>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                Retry
+              </Button>
+            </div>
+          </div>
+        </BrandContainer>
+      </BrandPage>
+    );
+  }
 
   return (
     <BrandPage>
