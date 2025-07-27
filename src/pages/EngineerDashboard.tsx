@@ -32,22 +32,27 @@ export default function EngineerDashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Enhanced effect with better timing and debugging
+  // Enhanced effect with aggressive debugging and forced execution
   useEffect(() => {
-    console.log('EngineerDashboard: useEffect triggered', { 
+    console.log('🔥 EngineerDashboard: useEffect triggered', { 
       userId: user?.id, 
       userEmail: user?.email,
       authLoading, 
       userObjectStable: !!user 
     });
     
-    // Only fetch data if user is fully authenticated and stable
-    if (user?.id && !authLoading && user?.email) {
-      console.log('EngineerDashboard: Conditions met, fetching engineer data');
-      setDebugInfo({ step: 'starting', userId: user.id, email: user.email });
-      fetchEngineerData();
+    // Always try to fetch if we have a user ID - remove email requirement
+    if (user?.id && !authLoading) {
+      console.log('🔥 EngineerDashboard: Basic conditions met, forcing data fetch');
+      setDebugInfo({ step: 'forcing_fetch', userId: user.id, email: user.email, timestamp: new Date().toISOString() });
+      
+      // Force fetch with a small delay to ensure DOM is ready
+      setTimeout(() => {
+        console.log('🔥 EngineerDashboard: Executing delayed fetch');
+        fetchEngineerData();
+      }, 100);
     } else {
-      console.log('EngineerDashboard: Conditions not met', {
+      console.log('🔥 EngineerDashboard: Conditions not met', {
         hasUserId: !!user?.id,
         hasUserEmail: !!user?.email,
         authLoading,
@@ -58,21 +63,37 @@ export default function EngineerDashboard() {
         hasUserId: !!user?.id,
         hasUserEmail: !!user?.email,
         authLoading,
-        message: 'Waiting for user authentication to complete'
+        message: 'Waiting for user authentication to complete',
+        timestamp: new Date().toISOString()
       });
     }
-  }, [user?.id, user?.email, authLoading]);
+  }, [user?.id, authLoading]);
+  
+  // Additional effect to force fetch when component mounts
+  useEffect(() => {
+    console.log('🚀 EngineerDashboard: Component mounted, forcing immediate check');
+    if (user?.id) {
+      console.log('🚀 EngineerDashboard: User exists on mount, forcing fetch');
+      fetchEngineerData();
+    }
+  }, []);
 
   const fetchEngineerData = async () => {
     try {
-      console.log('🚀 Starting engineer data fetch for user:', user?.id);
+      console.log('🚀 FORCE STARTING engineer data fetch for user:', user?.id);
       console.log('🚀 User email:', user?.email);
       console.log('🚀 Auth loading state:', authLoading);
+      console.log('🚀 Current timestamp:', new Date().toISOString());
+      
+      // Force loading state and clear previous state
       setLoading(true);
       setErrorMessage(null);
+      setJobs([]);
+      setEngineerInfo(null);
+      console.log('🚀 Set loading=true, cleared all previous state');
 
       // Step 1: Get engineer info - force fresh query
-      console.log('📋 Step 1: Fetching engineer info for user_id:', user?.id);
+      console.log('📋 Step 1: FORCE Fetching engineer info for user_id:', user?.id);
       const { data: engineer, error: engineerError } = await supabase
         .from('engineers')
         .select('*')
