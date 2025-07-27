@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Calendar, User, Clock, MapPin, FileText, Save, AlertTriangle, Check } from "lucide-react";
+import { Calendar, User, Clock, MapPin, FileText, Save, AlertTriangle, Check, Trash2, X } from "lucide-react";
 
 interface Engineer {
   id: string;
@@ -108,6 +109,20 @@ export function UnifiedInstallationForm({
   const handleSave = async () => {
     if (!canEdit) return;
     
+    // Check if user is trying to schedule installation but missing required fields
+    const hasEngineer = formData.engineer_id && formData.engineer_id !== 'none';
+    const hasDate = formData.scheduled_install_date;
+    const isAttemptingToSchedule = hasEngineer || hasDate;
+    
+    if (isAttemptingToSchedule && (!hasEngineer || !hasDate)) {
+      toast({
+        title: "Incomplete Booking",
+        description: "Both engineer and installation date must be set to schedule an installation.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const updateData: any = {};
@@ -137,9 +152,12 @@ export function UnifiedInstallationForm({
 
       if (error) throw error;
 
+      const isCompleteBooking = hasEngineer && hasDate;
       toast({
-        title: "Installation Updated",
-        description: "All installation details have been saved successfully.",
+        title: isCompleteBooking ? "Installation Scheduled" : "Details Updated",
+        description: isCompleteBooking 
+          ? "Installation has been successfully scheduled with engineer and date."
+          : "Installation details have been saved successfully.",
       });
 
       onUpdate();
@@ -155,7 +173,56 @@ export function UnifiedInstallationForm({
     }
   };
 
+  const handleClearSchedule = async () => {
+    if (!canEdit) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          engineer_id: null,
+          scheduled_install_date: null,
+          time_window: null
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Update local form state
+      setFormData(prev => ({
+        ...prev,
+        engineer_id: '',
+        scheduled_install_date: '',
+        time_window: ''
+      }));
+
+      toast({
+        title: "Schedule Cleared",
+        description: "Installation schedule has been cleared successfully.",
+      });
+
+      onUpdate();
+    } catch (error) {
+      console.error('Error clearing schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clear installation schedule",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const selectedEngineer = engineers.find(e => e.id === formData.engineer_id);
+  
+  // Validation state
+  const hasEngineer = formData.engineer_id && formData.engineer_id !== 'none';
+  const hasDate = formData.scheduled_install_date;
+  const isCompleteBooking = hasEngineer && hasDate;
+  const isAttemptingToSchedule = hasEngineer || hasDate;
+  const hasIncompleteBooking = isAttemptingToSchedule && !isCompleteBooking;
 
   return (
     <Card className={`${isScheduled ? 'border-primary bg-primary/5' : 'border-dashed'}`}>
@@ -192,11 +259,48 @@ export function UnifiedInstallationForm({
         
         {isScheduled && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-2 text-green-800">
-              <Check className="h-4 w-4" />
-              <span className="font-medium">Installation Scheduled</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-green-800">
+                <Check className="h-4 w-4" />
+                <span className="font-medium">Installation Scheduled</span>
+              </div>
+              {canEdit && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-800 hover:bg-red-50">
+                      <X className="h-4 w-4 mr-1" />
+                      Clear Schedule
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear Installation Schedule</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will remove the assigned engineer and installation date. The installation will need to be rescheduled. Are you sure?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleClearSchedule} className="bg-red-600 hover:bg-red-700">
+                        Clear Schedule
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </div>
+        )}
+
+        {hasIncompleteBooking && canEdit && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Both engineer and installation date must be set to complete the booking. 
+              {!hasEngineer ? " Please select an engineer." : ""}
+              {!hasDate ? " Please select an installation date." : ""}
+            </AlertDescription>
+          </Alert>
         )}
 
         <div className="grid gap-4">
@@ -335,10 +439,14 @@ export function UnifiedInstallationForm({
           <Button 
             onClick={handleSave} 
             disabled={!canEdit || isLoading}
-            className="min-w-32"
+            className="min-w-40"
+            variant={isCompleteBooking ? "default" : hasIncompleteBooking ? "destructive" : "default"}
           >
             <Save className="h-4 w-4 mr-2" />
-            {isLoading ? "Saving..." : "Save All Changes"}
+            {isLoading ? "Saving..." : 
+             isCompleteBooking ? "Schedule Installation" :
+             hasIncompleteBooking ? "Incomplete Booking" :
+             "Save Details"}
           </Button>
         </div>
       </CardContent>
