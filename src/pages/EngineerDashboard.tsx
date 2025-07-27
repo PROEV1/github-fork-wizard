@@ -59,8 +59,16 @@ export default function EngineerDashboard() {
   };
 
   const fetchEngineerJobs = async () => {
+    if (!engineerInfo?.id) {
+      console.log('Engineer ID not available yet, skipping job fetch');
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
+      console.log('Fetching jobs for engineer ID:', engineerInfo.id);
+      
+      // Simplified query - fetch orders first, then get related data
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
           id,
@@ -70,38 +78,79 @@ export default function EngineerDashboard() {
           scheduled_install_date,
           total_amount,
           engineer_signed_off_at,
-          quote:quotes!inner(
-            product_details,
-            client:clients!inner(
-              full_name,
-              phone
-            )
-          )
+          quote_id,
+          client_id
         `)
-        .eq('engineer_id', engineerInfo?.id)
+        .eq('engineer_id', engineerInfo.id)
         .order('scheduled_install_date', { ascending: true });
 
-      if (error) throw error;
+      if (ordersError) {
+        console.error('Orders query error:', ordersError);
+        throw ordersError;
+      }
 
-      const formattedJobs = data?.map(order => ({
-        id: order.id,
-        order_number: order.order_number,
-        client_name: order.quote.client.full_name,
-        client_phone: order.quote.client.phone,
-        job_address: order.job_address || 'Address not specified',
-        scheduled_install_date: order.scheduled_install_date,
-        status: order.status,
-        product_details: order.quote.product_details,
-        total_amount: order.total_amount,
-        engineer_signed_off_at: order.engineer_signed_off_at
-      })) || [];
+      console.log('Orders data:', ordersData);
 
+      if (!ordersData || ordersData.length === 0) {
+        console.log('No orders found for engineer');
+        setJobs([]);
+        return;
+      }
+
+      // Get quote and client data separately
+      const quoteIds = ordersData.map(order => order.quote_id);
+      const clientIds = ordersData.map(order => order.client_id);
+
+      const [quotesResult, clientsResult] = await Promise.all([
+        supabase
+          .from('quotes')
+          .select('id, product_details')
+          .in('id', quoteIds),
+        supabase
+          .from('clients')
+          .select('id, full_name, phone')
+          .in('id', clientIds)
+      ]);
+
+      if (quotesResult.error) {
+        console.error('Quotes query error:', quotesResult.error);
+        throw quotesResult.error;
+      }
+
+      if (clientsResult.error) {
+        console.error('Clients query error:', clientsResult.error);
+        throw clientsResult.error;
+      }
+
+      console.log('Quotes data:', quotesResult.data);
+      console.log('Clients data:', clientsResult.data);
+
+      // Manual join of the data
+      const formattedJobs = ordersData.map(order => {
+        const quote = quotesResult.data?.find(q => q.id === order.quote_id);
+        const client = clientsResult.data?.find(c => c.id === order.client_id);
+
+        return {
+          id: order.id,
+          order_number: order.order_number,
+          client_name: client?.full_name || 'Unknown Client',
+          client_phone: client?.phone || 'No phone',
+          job_address: order.job_address || 'Address not specified',
+          scheduled_install_date: order.scheduled_install_date,
+          status: order.status,
+          product_details: quote?.product_details || 'No product details',
+          total_amount: order.total_amount,
+          engineer_signed_off_at: order.engineer_signed_off_at
+        };
+      });
+
+      console.log('Formatted jobs:', formattedJobs);
       setJobs(formattedJobs);
     } catch (error) {
       console.error('Error fetching engineer jobs:', error);
       toast({
         title: "Error",
-        description: "Failed to load your assigned jobs",
+        description: `Failed to load your assigned jobs: ${error.message}`,
         variant: "destructive",
       });
     } finally {
