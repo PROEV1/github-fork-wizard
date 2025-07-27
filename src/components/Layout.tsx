@@ -77,16 +77,25 @@ export default function Layout({ children }: LayoutProps) {
   const currentPath = location.pathname;
   console.log('Layout: Current path:', currentPath, 'User role:', userRole);
   
-  // Protect admin routes from clients
-  if (userRole === 'client' && (currentPath.startsWith('/admin') || currentPath === '/dashboard')) {
-    console.log('Layout: Client accessing admin route, redirecting to /client');
-    return <Navigate to="/client" replace />;
+  // Protect admin routes from non-admins
+  if (userRole !== 'admin' && (currentPath.startsWith('/admin') || currentPath === '/dashboard')) {
+    const redirectTo = userRole === 'engineer' ? '/engineer' : '/client';
+    console.log(`Layout: ${userRole} accessing admin route, redirecting to ${redirectTo}`);
+    return <Navigate to={redirectTo} replace />;
   }
   
-  // Protect client routes from admins  
-  if (userRole === 'admin' && currentPath === '/client') {
-    console.log('Layout: Admin accessing client route, redirecting to /dashboard');
-    return <Navigate to="/dashboard" replace />;
+  // Protect client routes from non-clients
+  if (userRole !== 'client' && currentPath === '/client') {
+    const redirectTo = userRole === 'admin' ? '/dashboard' : '/engineer';
+    console.log(`Layout: ${userRole} accessing client route, redirecting to ${redirectTo}`);
+    return <Navigate to={redirectTo} replace />;
+  }
+
+  // Protect engineer routes from non-engineers
+  if (userRole !== 'engineer' && currentPath.startsWith('/engineer')) {
+    const redirectTo = userRole === 'admin' ? '/dashboard' : '/client';
+    console.log(`Layout: ${userRole} accessing engineer route, redirecting to ${redirectTo}`);
+    return <Navigate to={redirectTo} replace />;
   }
 
   const adminMenuItems = [
@@ -110,8 +119,14 @@ export default function Layout({ children }: LayoutProps) {
     { icon: User, label: 'Profile', href: '/client#profile', action: () => { navigate('/client'); setTimeout(() => window.location.hash = 'profile', 0); } },
   ];
 
-  const menuItems = userRole === 'admin' ? adminMenuItems : clientMenuItems;
-  const dashboardLink = userRole === 'admin' ? '/dashboard' : '/client';
+  const engineerMenuItems = [
+    { icon: FileText, label: 'Dashboard', href: '/engineer', action: () => navigate('/engineer') },
+    { icon: FolderOpen, label: 'My Jobs', href: '/engineer', action: () => navigate('/engineer') },
+    { icon: User, label: 'Profile', href: '/engineer/profile', action: () => navigate('/engineer/profile') },
+  ];
+
+  const menuItems = userRole === 'admin' ? adminMenuItems : userRole === 'engineer' ? engineerMenuItems : clientMenuItems;
+  const dashboardLink = userRole === 'admin' ? '/dashboard' : userRole === 'engineer' ? '/engineer' : '/client';
 
   return (
     <div className="min-h-screen bg-background">

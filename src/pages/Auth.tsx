@@ -69,6 +69,9 @@ export default function Auth() {
       if (profile?.role === 'admin') {
         console.log('Redirecting admin to /dashboard');
         navigate('/dashboard', { replace: true });
+      } else if (profile?.role === 'engineer') {
+        console.log('Redirecting engineer to /engineer');
+        navigate('/engineer', { replace: true });
       } else {
         console.log('Redirecting client to /client');
         navigate('/client', { replace: true });
