@@ -39,56 +39,112 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase client created successfully');
     
-    // Create user with admin API (with temporary password)
-    console.log('Creating user with admin API...');
-    const temporaryPassword = `temp_${Math.random().toString(36).slice(2)}_${Date.now()}`;
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password: temporaryPassword,
-      email_confirm: true,
-      user_metadata: { full_name, role, region: region || '' },
+    // Check if user already exists
+    console.log('Checking if user exists with email:', email);
+    const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000
     });
 
-    console.log('User creation result:', { user: authData?.user?.id, error: authError });
-
-    if (authError) {
-      console.error('User creation failed:', authError);
+    if (listError) {
+      console.error('Failed to check existing users:', listError);
       return new Response(
-        JSON.stringify({ error: `Failed to create user: ${authError.message}` }),
+        JSON.stringify({ error: `Failed to check existing users: ${listError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!authData?.user?.id) {
-      console.error('User creation succeeded but no user ID returned');
-      throw new Error('User creation succeeded but no user ID returned');
+    const existingUser = existingUsers.users.find(user => user.email === email);
+    console.log('Existing user check result:', { 
+      exists: !!existingUser, 
+      userId: existingUser?.id 
+    });
+
+    let userId: string;
+    let isNewUser = false;
+
+    if (existingUser) {
+      // User exists, update their profile
+      console.log('User exists, updating profile for user:', existingUser.id);
+      userId = existingUser.id;
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: userId,
+          email,
+          full_name,
+          role,
+          region: region || '',
+          status: 'active',
+        }, {
+          onConflict: 'user_id'
+        });
+
+      console.log('Profile update result:', { profileError });
+
+      if (profileError) {
+        console.error('Profile update failed:', profileError);
+        return new Response(
+          JSON.stringify({ error: `Failed to update profile: ${profileError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // User doesn't exist, create new user
+      console.log('Creating new user with admin API...');
+      isNewUser = true;
+      const temporaryPassword = `temp_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: { full_name, role, region: region || '' },
+      });
+
+      console.log('User creation result:', { user: authData?.user?.id, error: authError });
+
+      if (authError) {
+        console.error('User creation failed:', authError);
+        return new Response(
+          JSON.stringify({ error: `Failed to create user: ${authError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!authData?.user?.id) {
+        console.error('User creation succeeded but no user ID returned');
+        throw new Error('User creation succeeded but no user ID returned');
+      }
+
+      userId = authData.user.id;
+
+      // Update the profile that was automatically created by the trigger
+      console.log('Updating auto-created profile for user:', userId);
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name,
+          role,
+          region: region || '',
+          status: 'active',
+        })
+        .eq('user_id', userId);
+
+      console.log('Profile update result:', { profileError });
+
+      if (profileError) {
+        console.error('Profile update failed, cleaning up user:', profileError);
+        await supabase.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: `Failed to update profile: ${profileError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Update the profile that was automatically created by the trigger
-    console.log('Updating auto-created profile for user:', authData.user.id);
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({
-        full_name,
-        role,
-        region: region || '',
-        status: 'active',
-      })
-      .eq('user_id', authData.user.id);
-
-    console.log('Profile update result:', { profileError });
-
-    if (profileError) {
-      console.error('Profile update failed, cleaning up user:', profileError);
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      return new Response(
-        JSON.stringify({ error: `Failed to update profile: ${profileError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Generate password reset link for the new user
-    console.log('Generating password reset link for user:', authData.user.id);
+    // Generate password reset link for the user
+    console.log('Generating password reset link for user:', userId);
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
@@ -101,7 +157,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (resetError || !resetData?.properties?.action_link) {
       console.error('Failed to generate password reset link:', resetError);
-      await supabase.auth.admin.deleteUser(authData.user.id);
+      if (isNewUser) {
+        await supabase.auth.admin.deleteUser(userId);
+      }
       return new Response(
         JSON.stringify({ error: `Failed to generate password setup link: ${resetError?.message || 'Unknown error'}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -339,8 +397,9 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'User invited successfully',
-        user_id: authData.user.id
+        message: isNewUser ? 'User created and invited successfully' : 'Existing user re-invited successfully',
+        user_id: userId,
+        is_new_user: isNewUser
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
