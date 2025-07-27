@@ -35,15 +35,16 @@ export default function JobStatusUpdater({
     const normalizedStatus = currentStatus?.toLowerCase();
     const index = JOB_STATUSES.findIndex(status => 
       status.key === normalizedStatus || 
-      status.label.toLowerCase() === normalizedStatus ||
-      (normalizedStatus === 'scheduled' && status.key === 'scheduled')
+      status.label.toLowerCase() === normalizedStatus
     );
     console.log('Found status index:', index, 'for status:', normalizedStatus);
-    return index;
+    return Math.max(0, index); // Default to 0 if not found
   };
 
   const updateJobStatus = async (newStatus: string) => {
     setUpdating(true);
+    console.log('Updating job status to:', newStatus, 'for job ID:', jobId);
+    
     try {
       // Update the engineer_status field specifically for engineer progress
       const { error } = await supabase
@@ -55,10 +56,13 @@ export default function JobStatusUpdater({
         })
         .eq('id', jobId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
 
       // Log the status change activity
-      await supabase.rpc('log_order_activity', {
+      const { error: logError } = await supabase.rpc('log_order_activity', {
         p_order_id: jobId,
         p_activity_type: 'engineer_status_update',
         p_description: `Engineer updated status to ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`,
@@ -67,6 +71,11 @@ export default function JobStatusUpdater({
           updated_by_engineer: true
         }
       });
+
+      if (logError) {
+        console.error('Activity log error:', logError);
+        // Don't throw here as the main update succeeded
+      }
 
       toast({
         title: "Status Updated",
@@ -78,7 +87,7 @@ export default function JobStatusUpdater({
       console.error('Error updating job status:', error);
       toast({
         title: "Error",
-        description: "Failed to update job status",
+        description: error instanceof Error ? error.message : "Failed to update job status",
         variant: "destructive",
       });
     } finally {
@@ -127,23 +136,22 @@ export default function JobStatusUpdater({
 
         <div className="grid grid-cols-2 gap-2">
           {JOB_STATUSES.map((status, index) => {
-            const isCurrentStatus = status.key === currentStatus?.toLowerCase() || 
-                                  status.label.toLowerCase() === currentStatus?.toLowerCase();
+            const isCurrentStatus = status.key === currentStatus?.toLowerCase();
             const isPastStatus = index < currentIndex;
             const isNextStatus = index === currentIndex + 1;
-            const isDisabled = updating || index > currentIndex + 1 || isCurrentStatus;
+            const canClick = !updating && (isNextStatus || (currentIndex === -1 && index === 0));
 
             return (
               <Button
                 key={status.key}
                 variant={isCurrentStatus ? "default" : isPastStatus ? "secondary" : "outline"}
                 size="sm"
-                disabled={isDisabled}
-                onClick={() => updateJobStatus(status.key)}
+                disabled={!canClick && !isCurrentStatus}
+                onClick={() => canClick ? updateJobStatus(status.key) : undefined}
                 className={`flex items-center space-x-1 ${
                   isPastStatus ? 'opacity-60' : ''
                 } ${
-                  isNextStatus ? 'ring-2 ring-primary/50' : ''
+                  canClick ? 'ring-2 ring-primary/50 hover:ring-primary' : ''
                 }`}
               >
                 <status.icon className="h-3 w-3" />

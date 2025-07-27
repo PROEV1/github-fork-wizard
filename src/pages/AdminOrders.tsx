@@ -10,17 +10,20 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { EngineerStatusBadge } from '@/components/admin/EngineerStatusBadge';
 
 interface Order {
   id: string;
   order_number: string;
   status: string;
   status_enhanced: string;
+  engineer_status: string | null;
   total_amount: number;
   amount_paid: number;
   deposit_amount: number;
   created_at: string;
   installation_date: string | null;
+  engineer_id: string | null;
   client: {
     id: string;
     full_name: string;
@@ -28,6 +31,10 @@ interface Order {
   };
   quote: {
     quote_number: string;
+  };
+  engineer?: {
+    id: string;
+    name: string;
   };
 }
 
@@ -51,7 +58,8 @@ export default function AdminOrders() {
         .select(`
           *,
           client:clients(id, full_name, email),
-          quote:quotes(quote_number)
+          quote:quotes(quote_number),
+          engineer:engineers(id, name)
         `)
         .order('created_at', { ascending: false });
 
@@ -293,6 +301,7 @@ export default function AdminOrders() {
                   <TableHead>Order Number</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Engineer Progress</TableHead>
                   <TableHead>Total Amount</TableHead>
                   <TableHead>Amount Paid</TableHead>
                   <TableHead>Created</TableHead>
@@ -319,6 +328,20 @@ export default function AdminOrders() {
                       <Badge className={`text-white ${getStatusColor(order.status_enhanced)}`}>
                         {getStatusLabel(order.status_enhanced)}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {order.engineer_status && order.engineer_id ? (
+                        <div className="space-y-1">
+                          <EngineerStatusBadge status={order.engineer_status} />
+                          {order.engineer && (
+                            <p className="text-xs text-muted-foreground">{order.engineer.name}</p>
+                          )}
+                        </div>
+                      ) : order.engineer_id ? (
+                        <span className="text-xs text-muted-foreground">Engineer assigned</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No engineer assigned</span>
+                      )}
                     </TableCell>
                     <TableCell>{formatCurrency(order.total_amount)}</TableCell>
                     <TableCell>
