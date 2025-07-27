@@ -456,6 +456,45 @@ export type Database = {
           },
         ]
       }
+      order_completion_checklist: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          engineer_id: string | null
+          id: string
+          is_completed: boolean
+          item_description: string | null
+          item_id: string
+          item_label: string
+          order_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          engineer_id?: string | null
+          id?: string
+          is_completed?: boolean
+          item_description?: string | null
+          item_id: string
+          item_label: string
+          order_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          engineer_id?: string | null
+          id?: string
+          is_completed?: boolean
+          item_description?: string | null
+          item_id?: string
+          item_label?: string
+          order_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_payments: {
         Row: {
           amount: number
