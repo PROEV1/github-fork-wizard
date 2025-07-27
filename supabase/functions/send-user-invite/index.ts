@@ -39,11 +39,11 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Supabase client created successfully');
     
-    // Create user with admin API
+    // Create user with admin API (without password)
     console.log('Creating user with admin API...');
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
-      email_confirm: true,
+      email_confirm: false,
       user_metadata: { full_name, role, region: region || '' },
     });
 
@@ -84,6 +84,32 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Generate password reset link for the new user
+    console.log('Generating password reset link for user:', authData.user.id);
+    const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: 'https://preview--pro-spaces-client-portal.lovable.app/auth/setup-password'
+      }
+    });
+
+    console.log('Password reset link generation result:', { 
+      action_link: resetData?.properties?.action_link ? 'generated' : 'missing',
+      error: resetError 
+    });
+
+    if (resetError || !resetData?.properties?.action_link) {
+      console.error('Failed to generate password reset link:', resetError);
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      return new Response(
+        JSON.stringify({ error: `Failed to generate password setup link: ${resetError?.message || 'Unknown error'}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const passwordSetupUrl = resetData.properties.action_link;
 
     // Send email using Resend API
     console.log('Sending invitation email to:', email);
@@ -149,9 +175,9 @@ const handler = async (req: Request): Promise<Response> => {
                         </p>
                       </div>
                       
-                      <p style="margin: 20px 0; font-size: 16px; color: hsl(221, 20%, 30%); line-height: 1.5; text-align: center;">
-                        Your account is ready! Click the button below to sign in and get started.
-                      </p>
+                       <p style="margin: 20px 0; font-size: 16px; color: hsl(221, 20%, 30%); line-height: 1.5; text-align: center;">
+                         Your account has been created! Click the button below to set up your password and access your portal.
+                       </p>
                     </td>
                   </tr>
                   
@@ -160,12 +186,12 @@ const handler = async (req: Request): Promise<Response> => {
                     <td align="center" style="padding: 30px 40px;">
                       <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                         <tr>
-                          <td style="background: linear-gradient(135deg, hsl(178, 33%, 69%) 0%, hsl(178, 33%, 59%) 100%); border-radius: 8px; box-shadow: 0 4px 12px hsla(178, 33%, 69%, 0.3);">
-                            <a href="https://preview--pro-spaces-client-portal.lovable.app/auth" 
-                               style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px; transition: all 0.3s ease;">
-                              🚀 Sign In to Your Portal
-                            </a>
-                          </td>
+                           <td style="background: linear-gradient(135deg, hsl(178, 33%, 69%) 0%, hsl(178, 33%, 59%) 100%); border-radius: 8px; box-shadow: 0 4px 12px hsla(178, 33%, 69%, 0.3);">
+                             <a href="${passwordSetupUrl}" 
+                                style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; border-radius: 8px; transition: all 0.3s ease;">
+                               🔐 Set Up Your Password
+                             </a>
+                           </td>
                         </tr>
                       </table>
                     </td>
@@ -196,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
                         🎯 What to Expect
                       </h3>
                       <ul style="margin: 0; padding-left: 20px; color: hsl(221, 20%, 40%); font-size: 14px; line-height: 1.6;">
-                        <li style="margin-bottom: 8px;">Set up your password on first sign-in</li>
+                        <li style="margin-bottom: 8px;">Set up your secure password</li>
                         <li style="margin-bottom: 8px;">Access your personalized dashboard</li>
                         <li style="margin-bottom: 8px;">Manage projects and collaborate with your team</li>
                         <li style="margin-bottom: 0;">Get support from our dedicated team</li>

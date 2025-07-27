@@ -22,6 +22,7 @@ import ClientProfilePage from "./pages/ClientProfilePage";
 import EngineerDashboard from "./pages/EngineerDashboard";
 import EngineerJobDetail from "./pages/EngineerJobDetail";
 import Auth from "./pages/Auth";
+import SetupPassword from "./pages/SetupPassword";
 import AdminMessages from "./pages/AdminMessages";
 import AdminSettings from "./pages/AdminSettings";
 import AdminUsers from "./pages/AdminUsers";
@@ -43,6 +44,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/setup-password" element={<SetupPassword />} />
             <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
             <Route path="/client" element={<Layout><ClientDashboard /></Layout>} />
             <Route path="/client/orders/:orderId" element={<Layout><EnhancedClientOrderView /></Layout>} />
