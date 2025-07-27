@@ -50,8 +50,27 @@ export default function EngineerDashboard() {
     setDebugInfo({ step: 'direct_fetch_starting', userId: user?.id, timestamp: new Date().toISOString() });
 
     try {
-      // Single query to get all data at once
-      const { data: jobData, error } = await supabase
+      // Step 1: Get engineer ID first
+      console.log('💥 STEP 1: Getting engineer ID for user:', user?.id);
+      const { data: engineer, error: engineerError } = await supabase
+        .from('engineers')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+
+      console.log('💥 STEP 1 RESULT:', { engineer, engineerError });
+
+      if (engineerError || !engineer) {
+        setErrorMessage('Engineer profile not found');
+        setDebugInfo({ step: 'engineer_not_found', userId: user?.id, error: engineerError?.message });
+        return;
+      }
+
+      setEngineerInfo(engineer);
+
+      // Step 2: Get jobs for this engineer
+      console.log('💥 STEP 2: Getting jobs for engineer ID:', engineer.id);
+      const { data: jobs, error: jobsError } = await supabase
         .from('orders')
         .select(`
           id,
@@ -63,13 +82,6 @@ export default function EngineerDashboard() {
           engineer_signed_off_at,
           quote_id,
           client_id,
-          engineers!inner (
-            id,
-            name,
-            email,
-            region,
-            user_id
-          ),
           clients (
             full_name,
             phone
@@ -78,33 +90,32 @@ export default function EngineerDashboard() {
             product_details
           )
         `)
-        .eq('engineers.user_id', user?.id);
+        .eq('engineer_id', engineer.id);
 
-      console.log('💥 DIRECT FETCH: Raw query result:', { jobData, error });
+      console.log('💥 STEP 2 RESULT:', { jobs, jobsError, engineerId: engineer.id });
 
-      if (error) {
-        console.error('💥 DIRECT FETCH: Query error:', error);
-        setErrorMessage(`Database error: ${error.message}`);
-        setDebugInfo({ step: 'direct_fetch_error', error: error.message, userId: user?.id });
+      if (jobsError) {
+        console.error('💥 JOBS QUERY ERROR:', jobsError);
+        setErrorMessage(`Jobs query error: ${jobsError.message}`);
+        setDebugInfo({ step: 'jobs_query_error', error: jobsError.message, engineerId: engineer.id });
         return;
       }
 
-      if (!jobData || jobData.length === 0) {
-        console.log('💥 DIRECT FETCH: No jobs found for user');
+      if (!jobs || jobs.length === 0) {
+        console.log('💥 STEP 2: No jobs found for engineer');
         setJobs([]);
-        setDebugInfo({ step: 'direct_fetch_no_jobs', userId: user?.id, jobCount: 0 });
+        setDebugInfo({ 
+          step: 'no_jobs_found', 
+          userId: user?.id, 
+          engineerId: engineer.id,
+          engineerName: engineer.name,
+          jobCount: 0 
+        });
         return;
       }
 
-      // Set engineer info from first job
-      const firstJob = jobData[0];
-      if (firstJob.engineers) {
-        setEngineerInfo(firstJob.engineers);
-        console.log('💥 DIRECT FETCH: Set engineer info:', firstJob.engineers);
-      }
-
-      // Format jobs
-      const formattedJobs = jobData.map(job => ({
+      // Step 3: Format jobs
+      const formattedJobs = jobs.map(job => ({
         id: job.id,
         order_number: job.order_number,
         client_name: job.clients?.full_name || 'Unknown Client',
@@ -117,11 +128,13 @@ export default function EngineerDashboard() {
         engineer_signed_off_at: job.engineer_signed_off_at
       }));
 
-      console.log('💥 DIRECT FETCH: Formatted jobs:', formattedJobs);
+      console.log('💥 STEP 3: Formatted jobs:', formattedJobs);
       setJobs(formattedJobs);
       setDebugInfo({ 
-        step: 'direct_fetch_success', 
+        step: 'success', 
         userId: user?.id, 
+        engineerId: engineer.id,
+        engineerName: engineer.name,
         jobCount: formattedJobs.length,
         jobs: formattedJobs.map(j => ({ order: j.order_number, client: j.client_name }))
       });
