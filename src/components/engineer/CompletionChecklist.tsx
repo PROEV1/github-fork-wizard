@@ -4,6 +4,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChecklistItem {
   id: string;
@@ -56,39 +58,92 @@ export default function CompletionChecklist({
   disabled = false 
 }: CompletionChecklistProps) {
   const [completedItems, setCompletedItems] = useState<string[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Load saved checklist state from localStorage
-    const saved = localStorage.getItem(`checklist_${jobId}`);
-    if (saved) {
+    const loadChecklist = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        setCompletedItems(parsed);
+        const { data, error } = await supabase
+          .from('order_completion_checklist')
+          .select('item_id, is_completed')
+          .eq('order_id', jobId);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const completed = data.filter(item => item.is_completed).map(item => item.item_id);
+          setCompletedItems(completed);
+        } else {
+          // Initialize checklist items in database if they don't exist
+          const checklistData = CHECKLIST_ITEMS.map(item => ({
+            order_id: jobId,
+            item_id: item.id,
+            item_label: item.label,
+            item_description: item.description,
+            is_completed: false
+          }));
+
+          await supabase
+            .from('order_completion_checklist')
+            .insert(checklistData);
+        }
       } catch (error) {
-        console.error('Error parsing saved checklist:', error);
+        console.error('Error loading checklist:', error);
+        // Fallback to localStorage
+        const saved = localStorage.getItem(`checklist_${jobId}`);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setCompletedItems(parsed);
+          } catch (parseError) {
+            console.error('Error parsing saved checklist:', parseError);
+          }
+        }
       }
-    }
+    };
+
+    loadChecklist();
   }, [jobId]);
 
   useEffect(() => {
-    // Save to localStorage whenever checklist changes
-    localStorage.setItem(`checklist_${jobId}`, JSON.stringify(completedItems));
-    
     // Notify parent component
     const isAllComplete = completedItems.length === CHECKLIST_ITEMS.length;
     onChecklistChange(completedItems, isAllComplete);
-  }, [completedItems, jobId, onChecklistChange]);
+  }, [completedItems, onChecklistChange]);
 
-  const handleItemToggle = (itemId: string, checked: boolean) => {
+  const handleItemToggle = async (itemId: string, checked: boolean) => {
     if (disabled) return;
     
-    setCompletedItems(prev => {
-      if (checked) {
-        return [...prev, itemId];
-      } else {
-        return prev.filter(id => id !== itemId);
-      }
-    });
+    try {
+      // Update database
+      await supabase
+        .from('order_completion_checklist')
+        .update({ 
+          is_completed: checked,
+          completed_at: checked ? new Date().toISOString() : null
+        })
+        .eq('order_id', jobId)
+        .eq('item_id', itemId);
+
+      // Update local state
+      setCompletedItems(prev => {
+        if (checked) {
+          return [...prev, itemId];
+        } else {
+          return prev.filter(id => id !== itemId);
+        }
+      });
+
+      // Also save to localStorage as backup
+      localStorage.setItem(`checklist_${jobId}`, JSON.stringify(completedItems));
+    } catch (error) {
+      console.error('Error updating checklist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update checklist item",
+        variant: "destructive",
+      });
+    }
   };
 
   const progressPercentage = (completedItems.length / CHECKLIST_ITEMS.length) * 100;

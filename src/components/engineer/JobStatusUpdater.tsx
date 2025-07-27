@@ -36,12 +36,29 @@ export default function JobStatusUpdater({
   const updateJobStatus = async (newStatus: string) => {
     setUpdating(true);
     try {
+      // Update both status fields for proper status management
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          status_enhanced: newStatus as any, // This will be recalculated by the trigger
+          manual_status_override: true,
+          manual_status_notes: `Status updated by engineer to ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`
+        })
         .eq('id', jobId);
 
       if (error) throw error;
+
+      // Log the status change activity
+      await supabase.rpc('log_order_activity', {
+        p_order_id: jobId,
+        p_activity_type: 'engineer_status_update',
+        p_description: `Engineer updated status to ${JOB_STATUSES.find(s => s.key === newStatus)?.label}`,
+        p_details: {
+          new_status: newStatus,
+          updated_by_engineer: true
+        }
+      });
 
       toast({
         title: "Status Updated",
