@@ -30,7 +30,16 @@ export default function JobStatusUpdater({
   const { toast } = useToast();
 
   const getCurrentStatusIndex = () => {
-    return JOB_STATUSES.findIndex(status => status.key === currentStatus);
+    console.log('Current status from props:', currentStatus);
+    // Handle both the enhanced status and basic status, and normalize case
+    const normalizedStatus = currentStatus?.toLowerCase();
+    const index = JOB_STATUSES.findIndex(status => 
+      status.key === normalizedStatus || 
+      status.label.toLowerCase() === normalizedStatus ||
+      (normalizedStatus === 'scheduled' && status.key === 'scheduled')
+    );
+    console.log('Found status index:', index, 'for status:', normalizedStatus);
+    return index;
   };
 
   const updateJobStatus = async (newStatus: string) => {
@@ -119,17 +128,18 @@ export default function JobStatusUpdater({
 
         <div className="grid grid-cols-2 gap-2">
           {JOB_STATUSES.map((status, index) => {
-            const isCurrentStatus = status.key === currentStatus;
+            const isCurrentStatus = status.key === currentStatus?.toLowerCase() || 
+                                  status.label.toLowerCase() === currentStatus?.toLowerCase();
             const isPastStatus = index < currentIndex;
             const isNextStatus = index === currentIndex + 1;
-            const isDisabled = index > currentIndex + 1 || status.key === 'completed';
+            const isDisabled = updating || index > currentIndex + 1 || isCurrentStatus;
 
             return (
               <Button
                 key={status.key}
                 variant={isCurrentStatus ? "default" : isPastStatus ? "secondary" : "outline"}
                 size="sm"
-                disabled={updating || isDisabled || isCurrentStatus}
+                disabled={isDisabled}
                 onClick={() => updateJobStatus(status.key)}
                 className={`flex items-center space-x-1 ${
                   isPastStatus ? 'opacity-60' : ''
