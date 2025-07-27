@@ -37,12 +37,16 @@ export default function EngineerDashboard() {
     
     if (!user?.id) {
       console.log('❌ No user ID available, staying in loading state');
+      // Only set loading to false if we're sure there's no user coming
+      if (user === null) {
+        setLoading(false);
+      }
       return;
     }
 
     console.log('✅ User ID available, starting data fetch');
     fetchEngineerData();
-  }, [user?.id]);
+  }, [user]);
 
   const fetchEngineerData = async () => {
     try {
