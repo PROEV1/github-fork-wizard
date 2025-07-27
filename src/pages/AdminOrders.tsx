@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Search, Calendar, Package, User, FileText, ArrowLeft } from 'lucide-react';
+import { Eye, Search, Calendar, Package, User, FileText, ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface Order {
   id: string;
@@ -37,6 +38,7 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -111,6 +113,34 @@ export default function AdminOrders() {
       style: 'currency',
       currency: 'GBP'
     }).format(amount);
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    setDeletingOrderId(orderId);
+    try {
+      const { error } = await supabase.functions.invoke('admin-delete-order', {
+        body: { orderId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Order Deleted",
+        description: "Order has been successfully deleted.",
+      });
+
+      // Refresh the orders list
+      fetchOrders();
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete order",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingOrderId(null);
+    }
   };
 
   const getOrdersByStatus = (status: string) => {
@@ -309,14 +339,54 @@ export default function AdminOrders() {
                       }
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/order/${order.id}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/admin/order/${order.id}`)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              disabled={deletingOrderId === order.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Order</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete order <strong>{order.order_number}</strong> for <strong>{order.client.full_name}</strong>?
+                                <br /><br />
+                                This action cannot be undone. This will permanently delete:
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                  <li>The order and all its details</li>
+                                  <li>Associated payment records</li>
+                                  <li>Activity history</li>
+                                  <li>Engineer uploads</li>
+                                </ul>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteOrder(order.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                                disabled={deletingOrderId === order.id}
+                              >
+                                {deletingOrderId === order.id ? 'Deleting...' : 'Delete Order'}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
