@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BrandPage, BrandContainer, BrandHeading1, BrandLoading } from '@/components/brand';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { EnhancedJobStatusBadge, OrderStatusEnhanced } from '@/components/admin/EnhancedJobStatusBadge';
 import { Calendar, MapPin, Package, User } from 'lucide-react';
 
 interface EngineerJob {
@@ -15,7 +15,7 @@ interface EngineerJob {
   client_name: string;
   job_address: string;
   scheduled_install_date: string | null;
-  status: string;
+  status_enhanced: OrderStatusEnhanced;
   product_details: string;
   client_phone: string;
   total_amount: number;
@@ -81,7 +81,7 @@ export default function EngineerDashboard() {
         .select(`
           id,
           order_number,
-          status,
+          status_enhanced,
           job_address,
           scheduled_install_date,
           total_amount,
@@ -158,7 +158,7 @@ export default function EngineerDashboard() {
           client_phone: client?.phone || 'No phone',
           job_address: order.job_address || 'Address not specified',
           scheduled_install_date: order.scheduled_install_date,
-          status: order.status,
+          status_enhanced: order.status_enhanced,
           product_details: quote?.product_details || 'No product details',
           total_amount: order.total_amount,
           engineer_signed_off_at: order.engineer_signed_off_at
@@ -201,19 +201,14 @@ export default function EngineerDashboard() {
   };
 
 
-  const getStatusBadge = (status: string, signedOff: string | null) => {
+  const getStatusBadge = (status: OrderStatusEnhanced, signedOff: string | null) => {
+    // If engineer has signed off, show completed status
     if (signedOff) {
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">Completed</Badge>;
+      return <EnhancedJobStatusBadge status="completed" />;
     }
     
-    switch (status) {
-      case 'agreement_signed':
-        return <Badge variant="default">Scheduled</Badge>;
-      case 'in_progress':
-        return <Badge variant="outline" className="border-blue-500 text-blue-700">In Progress</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+    // Otherwise use the proper enhanced status
+    return <EnhancedJobStatusBadge status={status} />;
   };
 
   const formatDate = (dateString: string | null) => {
@@ -293,7 +288,7 @@ export default function EngineerDashboard() {
                   <div>
                     <p className="text-sm text-muted-foreground">Scheduled</p>
                     <p className="text-2xl font-bold">
-                      {jobs.filter(job => job.status === 'agreement_signed' && !job.engineer_signed_off_at).length}
+                      {jobs.filter(job => job.status_enhanced === 'scheduled' && !job.engineer_signed_off_at).length}
                     </p>
                   </div>
                 </div>
@@ -354,7 +349,7 @@ export default function EngineerDashboard() {
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <h3 className="font-semibold">{job.order_number}</h3>
-                            {getStatusBadge(job.status, job.engineer_signed_off_at)}
+                            {getStatusBadge(job.status_enhanced, job.engineer_signed_off_at)}
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-muted-foreground">
