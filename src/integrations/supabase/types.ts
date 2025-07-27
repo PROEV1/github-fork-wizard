@@ -555,6 +555,7 @@ export type Database = {
           engineer_notes: string | null
           engineer_signature_data: string | null
           engineer_signed_off_at: string | null
+          engineer_status: string | null
           estimated_duration_hours: number | null
           id: string
           installation_date: string | null
@@ -586,6 +587,7 @@ export type Database = {
           engineer_notes?: string | null
           engineer_signature_data?: string | null
           engineer_signed_off_at?: string | null
+          engineer_status?: string | null
           estimated_duration_hours?: number | null
           id?: string
           installation_date?: string | null
@@ -617,6 +619,7 @@ export type Database = {
           engineer_notes?: string | null
           engineer_signature_data?: string | null
           engineer_signed_off_at?: string | null
+          engineer_status?: string | null
           estimated_duration_hours?: number | null
           id?: string
           installation_date?: string | null
