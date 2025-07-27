@@ -35,6 +35,22 @@ export function ClientDetailsSection({ order, onUpdate }: ClientDetailsProps) {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  // Parse address into components for better editing
+  const parseAddress = (address: string | null) => {
+    if (!address) return { street: '', city: '', postcode: '' };
+    
+    // Simple parsing - you might want to make this more sophisticated
+    const parts = address.split(',').map(p => p.trim());
+    if (parts.length >= 3) {
+      return {
+        street: parts.slice(0, -2).join(', '),
+        city: parts[parts.length - 2],
+        postcode: parts[parts.length - 1]
+      };
+    }
+    return { street: address, city: '', postcode: '' };
+  };
+
   const [editData, setEditData] = useState({
     full_name: order.client.full_name,
     email: order.client.email,
@@ -42,16 +58,28 @@ export function ClientDetailsSection({ order, onUpdate }: ClientDetailsProps) {
     address: order.client.address || ''
   });
 
+  // Separate state for address components during editing
+  const [addressComponents, setAddressComponents] = useState(() => 
+    parseAddress(order.client.address)
+  );
+
   const handleSave = async () => {
     setIsLoading(true);
     try {
+      // Reconstruct address from components
+      const reconstructedAddress = [
+        addressComponents.street, 
+        addressComponents.city, 
+        addressComponents.postcode
+      ].filter(p => p && p.trim()).join(', ');
+
       const { error } = await supabase
         .from('clients')
         .update({
           full_name: editData.full_name,
           email: editData.email,
           phone: editData.phone || null,
-          address: editData.address || null
+          address: reconstructedAddress || null
         })
         .eq('id', order.client.id);
 
@@ -83,34 +111,12 @@ export function ClientDetailsSection({ order, onUpdate }: ClientDetailsProps) {
       phone: order.client.phone || '',
       address: order.client.address || ''
     });
+    setAddressComponents(parseAddress(order.client.address));
     setIsEditing(false);
   };
 
-  // Parse address into components for better editing
-  const parseAddress = (address: string | null) => {
-    if (!address) return { street: '', city: '', postcode: '' };
-    
-    // Simple parsing - you might want to make this more sophisticated
-    const parts = address.split(',').map(p => p.trim());
-    if (parts.length >= 3) {
-      return {
-        street: parts.slice(0, -2).join(', '),
-        city: parts[parts.length - 2],
-        postcode: parts[parts.length - 1]
-      };
-    }
-    return { street: address, city: '', postcode: '' };
-  };
-
-  const addressParts = parseAddress(editData.address);
-
-  const updateAddress = (field: string, value: string) => {
-    const currentParts = parseAddress(editData.address);
-    const updatedParts = { ...currentParts, [field]: value };
-    const newAddress = [updatedParts.street, updatedParts.city, updatedParts.postcode]
-      .filter(p => p && p.trim())
-      .join(', ');
-    setEditData(prev => ({ ...prev, address: newAddress }));
+  const updateAddressComponent = (field: string, value: string) => {
+    setAddressComponents(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -183,19 +189,19 @@ export function ClientDetailsSection({ order, onUpdate }: ClientDetailsProps) {
             <div className="space-y-3">
               <label className="text-sm font-medium">Address</label>
               <Input
-                value={addressParts.street}
-                onChange={(e) => updateAddress('street', e.target.value)}
+                value={addressComponents.street}
+                onChange={(e) => updateAddressComponent('street', e.target.value)}
                 placeholder="Street address"
               />
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  value={addressParts.city}
-                  onChange={(e) => updateAddress('city', e.target.value)}
+                  value={addressComponents.city}
+                  onChange={(e) => updateAddressComponent('city', e.target.value)}
                   placeholder="City"
                 />
                 <Input
-                  value={addressParts.postcode}
-                  onChange={(e) => updateAddress('postcode', e.target.value)}
+                  value={addressComponents.postcode}
+                  onChange={(e) => updateAddressComponent('postcode', e.target.value)}
                   placeholder="Postcode"
                 />
               </div>
