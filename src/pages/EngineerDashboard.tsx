@@ -160,6 +160,11 @@ export default function EngineerDashboard() {
 
       console.log('Formatted jobs:', formattedJobs);
       setJobs(formattedJobs);
+      
+      toast({
+        title: "Jobs Loaded",
+        description: `Found ${formattedJobs.length} assigned job${formattedJobs.length === 1 ? '' : 's'}`,
+      });
     } catch (error) {
       console.error('Error fetching engineer jobs:', error);
       toast({

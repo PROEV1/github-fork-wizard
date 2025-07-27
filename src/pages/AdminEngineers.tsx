@@ -316,11 +316,11 @@ export default function AdminEngineers() {
                      className="w-full px-3 py-2 border border-input rounded-md"
                    >
                      <option value="">Select user account (optional)</option>
-                     {availableUsers.map((user) => (
-                       <option key={user.id} value={user.id}>
-                         {user.full_name} ({user.email})
-                       </option>
-                     ))}
+                      {availableUsers.map((user) => (
+                        <option key={user.user_id} value={user.user_id}>
+                          {user.full_name} ({user.email})
+                        </option>
+                      ))}
                    </select>
                  </div>
                 
