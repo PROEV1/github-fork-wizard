@@ -2,7 +2,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings, FileText, MessageCircle, FolderOpen, Users, Package, ChevronDown, ShoppingCart, UserCog } from 'lucide-react';
+import { LogOut, User, Settings, FileText, MessageCircle, FolderOpen, Users, Package, ChevronDown, ShoppingCart, UserCog, Calendar, Clock } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ProSpacesLogo } from '@/components/ProSpacesLogo';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -105,6 +105,7 @@ export default function Layout({ children }: LayoutProps) {
     { icon: FileText, label: 'Dashboard', href: '/dashboard', action: () => navigate('/dashboard') },
     { icon: FileText, label: 'Quotes', href: '/admin/quotes', action: () => navigate('/admin/quotes') },
     { icon: ShoppingCart, label: 'Orders', href: '/admin/orders', action: () => navigate('/admin/orders') },
+    { icon: Calendar, label: 'Schedule', href: '/admin/schedule', action: () => navigate('/admin/schedule') },
     { icon: User, label: 'Engineers', href: '/admin/engineers', action: () => navigate('/admin/engineers') },
     { icon: Users, label: 'Clients', href: '/admin/clients', action: () => navigate('/admin/clients') },
     { icon: Users, label: 'Leads', href: '/admin/leads', action: () => navigate('/admin/leads') },
@@ -117,6 +118,7 @@ export default function Layout({ children }: LayoutProps) {
   const clientMenuItems = [
     { icon: FileText, label: 'Dashboard', href: '/client', action: () => { navigate('/client'); window.history.replaceState(null, '', '/client'); window.dispatchEvent(new HashChangeEvent('hashchange')); } },
     { icon: FileText, label: 'Quotes', href: '/client#quotes', action: () => { navigate('/client'); setTimeout(() => window.location.hash = 'quotes', 0); } },
+    { icon: Calendar, label: 'Availability', href: '/client/date-blocking', action: () => navigate('/client/date-blocking') },
     { icon: MessageCircle, label: 'Messages', href: '/client#messages', action: () => { navigate('/client'); setTimeout(() => window.location.hash = 'messages', 0); } },
     { icon: FolderOpen, label: 'Documents', href: '/client#documents', action: () => { navigate('/client'); setTimeout(() => window.location.hash = 'documents', 0); } },
     { icon: User, label: 'Profile', href: '/client#profile', action: () => { navigate('/client'); setTimeout(() => window.location.hash = 'profile', 0); } },
@@ -132,6 +134,7 @@ export default function Layout({ children }: LayoutProps) {
         window.location.reload();
       }, 100);
     }},
+    { icon: Clock, label: 'Availability', href: '/engineer/availability', action: () => navigate('/engineer/availability') },
     { icon: User, label: 'Profile', href: '/engineer/profile', action: () => navigate('/engineer/profile') },
   ];
 

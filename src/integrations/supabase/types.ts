@@ -198,6 +198,95 @@ export type Database = {
           },
         ]
       }
+      engineer_service_areas: {
+        Row: {
+          created_at: string
+          engineer_id: string
+          id: string
+          max_travel_minutes: number | null
+          postcode_area: string
+        }
+        Insert: {
+          created_at?: string
+          engineer_id: string
+          id?: string
+          max_travel_minutes?: number | null
+          postcode_area: string
+        }
+        Update: {
+          created_at?: string
+          engineer_id?: string
+          id?: string
+          max_travel_minutes?: number | null
+          postcode_area?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engineer_service_areas_engineer_id_fkey"
+            columns: ["engineer_id"]
+            isOneToOne: false
+            referencedRelation: "engineers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engineer_time_off: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          end_date: string
+          engineer_id: string
+          id: string
+          notes: string | null
+          reason: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          end_date: string
+          engineer_id: string
+          id?: string
+          notes?: string | null
+          reason: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          end_date?: string
+          engineer_id?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engineer_time_off_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "engineer_time_off_engineer_id_fkey"
+            columns: ["engineer_id"]
+            isOneToOne: false
+            referencedRelation: "engineers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       engineer_uploads: {
         Row: {
           description: string | null
@@ -260,6 +349,7 @@ export type Database = {
           id: string
           name: string
           region: string | null
+          starting_postcode: string | null
           updated_at: string
           user_id: string | null
         }
@@ -270,6 +360,7 @@ export type Database = {
           id?: string
           name: string
           region?: string | null
+          starting_postcode?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -280,6 +371,7 @@ export type Database = {
           id?: string
           name?: string
           region?: string | null
+          starting_postcode?: string | null
           updated_at?: string
           user_id?: string | null
         }

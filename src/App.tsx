@@ -33,6 +33,9 @@ import AdminUserInvite from "./pages/AdminUserInvite";
 import OrderDetail from "./pages/OrderDetail";
 import PublicQuoteView from "./pages/PublicQuoteView";
 import EnhancedClientOrderView from "./pages/EnhancedClientOrderView";
+import AdminSchedule from "./pages/AdminSchedule";
+import ClientDateBlocking from "./pages/ClientDateBlocking";
+import EngineerAvailability from "./pages/EngineerAvailability";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,12 +52,15 @@ const App = () => (
             <Route path="/auth/setup-password" element={<SetupPassword />} />
             <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
             <Route path="/client" element={<Layout><ClientDashboard /></Layout>} />
+            <Route path="/client/date-blocking" element={<Layout><ClientDateBlocking /></Layout>} />
             <Route path="/client/orders/:orderId" element={<Layout><EnhancedClientOrderView /></Layout>} />
             <Route path="/engineer" element={<Layout><EngineerDashboard /></Layout>} />
             <Route path="/engineer/profile" element={<Layout><EngineerProfile /></Layout>} />
+            <Route path="/engineer/availability" element={<Layout><EngineerAvailability /></Layout>} />
             <Route path="/engineer/job/:jobId" element={<Layout><EngineerJobDetail /></Layout>} />
             <Route path="/admin" element={<Layout><Admin /></Layout>} />
             <Route path="/admin/orders" element={<Layout><AdminOrders /></Layout>} />
+            <Route path="/admin/schedule" element={<Layout><AdminSchedule /></Layout>} />
             <Route path="/admin/engineers" element={<Layout><AdminEngineers /></Layout>} />
             <Route path="/admin/products" element={<Layout><AdminProducts /></Layout>} />
             <Route path="/admin/clients" element={<Layout><AdminClients /></Layout>} />

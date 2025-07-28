@@ -25,14 +25,18 @@ export interface SchedulingConflict {
   message: string;
 }
 
-// Dummy distance calculation for postcode areas
+// Enhanced distance calculation using starting postcodes
 export const calculateDistance = (postcode1?: string, postcode2?: string): number => {
-  if (!postcode1 || !postcode2) return 0;
+  if (!postcode1 || !postcode2) return 10; // Default distance
   
-  const area1 = postcode1.substring(0, 2).toUpperCase();
-  const area2 = postcode2.substring(0, 2).toUpperCase();
+  // Extract postcode areas (first part before space or first 2-3 characters)
+  const area1 = postcode1.split(' ')[0] || postcode1.substring(0, 3);
+  const area2 = postcode2.split(' ')[0] || postcode2.substring(0, 3);
   
-  // Simple distance lookup table for UK postcode areas
+  // Simple distance estimation based on postcode areas
+  if (area1 === area2) return 2; // Same area, very close
+  
+  // Enhanced distance lookup table for UK postcode areas
   const distanceMap: Record<string, Record<string, number>> = {
     'M1': { 'M2': 5, 'M3': 8, 'B1': 85, 'L1': 35, 'LS': 45 },
     'M2': { 'M1': 5, 'M3': 10, 'B1': 90, 'L1': 40, 'LS': 50 },
@@ -41,7 +45,26 @@ export const calculateDistance = (postcode1?: string, postcode2?: string): numbe
     'LS': { 'M1': 45, 'M2': 50, 'B1': 130, 'L1': 75 }
   };
   
-  return distanceMap[area1]?.[area2] || Math.floor(Math.random() * 50) + 10;
+  // Try exact match first
+  const exactDistance = distanceMap[area1]?.[area2];
+  if (exactDistance) return exactDistance;
+  
+  // Fallback to similarity-based distance
+  const similarity = calculatePostcodeSimilarity(area1, area2);
+  return Math.floor((1 - similarity) * 50) + 2; // 2-52 miles based on similarity
+};
+
+const calculatePostcodeSimilarity = (area1: string, area2: string): number => {
+  if (area1 === area2) return 1;
+  
+  // Check if they start with same letters (rough proximity)
+  const letters1 = area1.replace(/[0-9]/g, '');
+  const letters2 = area2.replace(/[0-9]/g, '');
+  
+  if (letters1 === letters2) return 0.8;
+  if (letters1[0] === letters2[0]) return 0.6;
+  
+  return 0.2; // Different areas
 };
 
 // Calculate estimated travel time in minutes
@@ -50,23 +73,50 @@ export const calculateTravelTime = (distance: number): number => {
   return Math.round((distance / 30) * 60);
 };
 
-// Get engineer availability for a specific date
+// Get engineer availability for a specific date, considering time off
 export const getEngineerAvailability = async (engineerId: string, date: string) => {
-  const dayOfWeek = new Date(date).getDay();
-  
-  const { data, error } = await supabase
-    .from('engineer_availability')
-    .select('*')
-    .eq('engineer_id', engineerId)
-    .eq('day_of_week', dayOfWeek)
-    .eq('is_available', true);
-  
-  if (error) {
+  try {
+    // Check if engineer has time off on this date
+    const { data: timeOffData, error: timeOffError } = await supabase
+      .from('engineer_time_off')
+      .select('*')
+      .eq('engineer_id', engineerId)
+      .eq('status', 'approved')
+      .lte('start_date', date)
+      .gte('end_date', date);
+
+    if (timeOffError) throw timeOffError;
+    
+    // If engineer has approved time off, they're not available
+    if (timeOffData && timeOffData.length > 0) {
+      return { available: false, reason: 'time_off' };
+    }
+
+    // Get working hours for the day of week
+    const dayOfWeek = new Date(date).getDay();
+    const { data: workingHours, error } = await supabase
+      .from('engineer_availability')
+      .select('*')
+      .eq('engineer_id', engineerId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('is_available', true);
+
+    if (error) throw error;
+    
+    if (!workingHours || workingHours.length === 0) {
+      return { available: false, reason: 'not_working_day' };
+    }
+
+    return { 
+      available: true, 
+      workingHours: workingHours[0],
+      start_time: workingHours[0].start_time,
+      end_time: workingHours[0].end_time
+    };
+  } catch (error) {
     console.error('Error fetching engineer availability:', error);
-    return null;
+    return { available: false, reason: 'error' };
   }
-  
-  return data?.[0] || null;
 };
 
 // Get client blocked dates

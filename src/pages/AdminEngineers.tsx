@@ -22,7 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Settings, User, MapPin, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Settings, User, MapPin, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { EngineerScheduleManager } from '@/components/admin/EngineerScheduleManager';
+import { useNavigate } from 'react-router-dom';
 
 interface Engineer {
   id: string;
@@ -37,11 +39,14 @@ interface Engineer {
 }
 
 export default function AdminEngineers() {
+  const navigate = useNavigate();
   const [engineers, setEngineers] = useState<Engineer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEngineer, setEditingEngineer] = useState<Engineer | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showScheduleManager, setShowScheduleManager] = useState(false);
+  const [selectedEngineer, setSelectedEngineer] = useState<Engineer | null>(null);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -432,7 +437,7 @@ export default function AdminEngineers() {
                     <TableHead>Status</TableHead>
                     <TableHead>Jobs Assigned</TableHead>
                     <TableHead>Jobs Completed</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -476,6 +481,16 @@ export default function AdminEngineers() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => {
+                              setSelectedEngineer(engineer);
+                              setShowScheduleManager(true);
+                            }}
+                          >
+                            <Clock className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleToggleAvailability(engineer)}
                           >
                             {engineer.availability ? (
@@ -493,6 +508,21 @@ export default function AdminEngineers() {
             )}
           </CardContent>
         </Card>
+
+        {/* Schedule Manager Modal */}
+        {showScheduleManager && selectedEngineer && (
+          <Dialog open={showScheduleManager} onOpenChange={setShowScheduleManager}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Engineer Schedule Management</DialogTitle>
+              </DialogHeader>
+              <EngineerScheduleManager 
+                engineerId={selectedEngineer.id}
+                engineerName={selectedEngineer.name}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </BrandContainer>
     </BrandPage>
   );
