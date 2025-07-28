@@ -44,9 +44,9 @@ export function AdminScheduleCalendar() {
   const [view, setView] = useState<View>('month');
   const [date, setDate] = useState(new Date());
   const [filters, setFilters] = useState({
-    engineerId: '',
-    region: '',
-    status: ''
+    engineerId: 'all-engineers',
+    region: 'all-regions',
+    status: 'all-statuses'
   });
   const [loading, setLoading] = useState(true);
 
@@ -95,19 +95,19 @@ export function AdminScheduleCalendar() {
     );
 
     // Apply filters
-    if (filters.engineerId) {
+    if (filters.engineerId && filters.engineerId !== 'all-engineers') {
       filteredOrders = filteredOrders.filter(order => 
         order.engineer_id === filters.engineerId
       );
     }
 
-    if (filters.region) {
+    if (filters.region && filters.region !== 'all-regions') {
       filteredOrders = filteredOrders.filter(order => 
         order.engineer?.region === filters.region
       );
     }
 
-    if (filters.status) {
+    if (filters.status && filters.status !== 'all-statuses') {
       filteredOrders = filteredOrders.filter(order => 
         order.status_enhanced === filters.status
       );

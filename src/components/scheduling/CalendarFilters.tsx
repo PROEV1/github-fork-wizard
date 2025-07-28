@@ -37,9 +37,9 @@ export function CalendarFilters({ engineers, filters, onFiltersChange }: Calenda
 
   const clearFilters = () => {
     onFiltersChange({
-      engineerId: '',
-      region: '',
-      status: ''
+      engineerId: 'all-engineers',
+      region: 'all-regions',
+      status: 'all-statuses'
     });
   };
 
@@ -59,8 +59,8 @@ export function CalendarFilters({ engineers, filters, onFiltersChange }: Calenda
               <SelectTrigger>
                 <SelectValue placeholder="All Engineers" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Engineers</SelectItem>
+              <SelectContent className="bg-background border border-border z-50">
+                <SelectItem value="all-engineers">All Engineers</SelectItem>
                 {engineers.map(engineer => (
                   <SelectItem key={engineer.id} value={engineer.id}>
                     {engineer.name} {engineer.region && `(${engineer.region})`}
@@ -76,8 +76,8 @@ export function CalendarFilters({ engineers, filters, onFiltersChange }: Calenda
               <SelectTrigger>
                 <SelectValue placeholder="All Regions" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Regions</SelectItem>
+              <SelectContent className="bg-background border border-border z-50">
+                <SelectItem value="all-regions">All Regions</SelectItem>
                 {regions.map(region => (
                   <SelectItem key={region} value={region!}>
                     {region}
@@ -93,8 +93,8 @@ export function CalendarFilters({ engineers, filters, onFiltersChange }: Calenda
               <SelectTrigger>
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Statuses</SelectItem>
+              <SelectContent className="bg-background border border-border z-50">
+                <SelectItem value="all-statuses">All Statuses</SelectItem>
                 {statuses.map(status => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
