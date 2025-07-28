@@ -12,7 +12,8 @@ export type OrderStatusEnhanced =
   | 'in_progress'
   | 'install_completed_pending_qa'
   | 'completed'
-  | 'revisit_required';
+  | 'revisit_required'
+  | 'awaiting_final_payment';
 
 interface EnhancedJobStatusBadgeProps {
   status: OrderStatusEnhanced;
@@ -75,6 +76,11 @@ const statusConfig = {
     label: "Revisit Required",
     color: "bg-red-100 text-red-800 border-red-200",
     icon: "⚠️"
+  },
+  awaiting_final_payment: {
+    label: "Awaiting Final Payment",
+    color: "bg-amber-100 text-amber-800 border-amber-200",
+    icon: "💰"
   }
 };
 

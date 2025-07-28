@@ -42,6 +42,7 @@ export function OrderStatusManager({
     { value: 'install_completed_pending_qa', label: 'Install Completed (Pending QA)' },
     { value: 'completed', label: 'Completed' },
     { value: 'revisit_required', label: 'Revisit Required' },
+    { value: 'awaiting_final_payment', label: 'Awaiting Final Payment' },
   ];
 
   const handleUpdateStatus = async () => {
