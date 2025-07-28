@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, momentLocalizer, View } from 'react-big-calendar';
 import moment from 'moment';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -163,15 +161,25 @@ export function AdminScheduleCalendar() {
   }, [orders]);
 
   // Handle drops from external sources (sidebar)
-  const handleDropFromOutside = useCallback((dragInfo: any) => {
+  const handleDropFromOutside = useCallback(({ draggedEvent, start, end }: any) => {
+    console.log('Drop from outside:', draggedEvent, start, end);
+    
+    if (!draggedEvent || !start) {
+      console.error('Invalid drop data');
+      return;
+    }
+
+    // Set slot info for recommendations
+    const slot = {
+      start,
+      end: end || start,
+      resourceId: null
+    };
+    
+    setSelectedSlot(slot);
+    
+    // If we have a dragged job from sidebar, show recommendations
     if (draggedJob) {
-      // Calculate slot info from drop position
-      const slot = {
-        start: dragInfo.start || new Date(),
-        end: dragInfo.end || new Date(),
-        resourceId: dragInfo.resourceId
-      };
-      setSelectedSlot(slot);
       setDraggedOrder(draggedJob);
       setShowRecommendations(true);
     }
@@ -286,8 +294,7 @@ export function AdminScheduleCalendar() {
   }
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header with Stats */}
         <div className="flex justify-between items-center">
           <div>
@@ -394,30 +401,34 @@ export function AdminScheduleCalendar() {
                   </CardHeader>
                   <CardContent>
                     <div style={{ height: '600px' }}>
-                      <Calendar
-                        localizer={localizer}
-                        events={events}
-                        startAccessor="start"
-                        endAccessor="end"
-                        view={view}
-                        onView={setView}
-                        date={date}
-                        onNavigate={setDate}
-                        onSelectEvent={handleSelectEvent}
-                        onSelectSlot={handleSelectSlot}
-                        onDropFromOutside={handleDropFromOutside}
-                        selectable
-                        popup
-                        drilldownView={null}
-                        components={{
-                          event: EventComponent,
-                        }}
-                        eventPropGetter={eventStyleGetter}
-                        step={30}
-                        timeslots={2}
-                        min={new Date(0, 0, 0, 8, 0, 0)}
-                        max={new Date(0, 0, 0, 18, 0, 0)}
-                      />
+                       <Calendar
+                         localizer={localizer}
+                         events={events}
+                         startAccessor="start"
+                         endAccessor="end"
+                         view={view}
+                         onView={setView}
+                         date={date}
+                         onNavigate={setDate}
+                         onSelectEvent={handleSelectEvent}
+                         onSelectSlot={handleSelectSlot}
+                         onDropFromOutside={handleDropFromOutside}
+                         dragFromOutsideItem={draggedJob ? {
+                           orderId: draggedJob.id,
+                           title: `Order #${draggedJob.order_number}`
+                         } : null}
+                         selectable
+                         popup
+                         drilldownView={null}
+                         components={{
+                           event: EventComponent,
+                         }}
+                         eventPropGetter={eventStyleGetter}
+                         step={30}
+                         timeslots={2}
+                         min={new Date(0, 0, 0, 8, 0, 0)}
+                         max={new Date(0, 0, 0, 18, 0, 0)}
+                       />
                     </div>
                   </CardContent>
                 </Card>
@@ -465,7 +476,6 @@ export function AdminScheduleCalendar() {
             {/* JobDetailsModal temporarily disabled for build */}
           </>
         )}
-      </div>
-    </DndProvider>
+    </div>
   );
 }

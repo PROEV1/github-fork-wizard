@@ -30,12 +30,13 @@ export function JobCard({
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'job',
-    item: { 
-      orderId: order.id, 
-      order 
-    },
-    begin: () => {
+    item: () => {
       onStartDrag?.(order);
+      return { 
+        orderId: order.id,
+        order,
+        title: `Order #${order.order_number}`
+      };
     },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
