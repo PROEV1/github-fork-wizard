@@ -46,6 +46,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [coreProducts, setCoreProducts] = useState<CoreProduct[]>([]);
   const [compatibleProducts, setCompatibleProducts] = useState<string[]>([]);
   const [formData, setFormData] = useState({
@@ -62,8 +63,32 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
     fetchCoreProducts();
     if (product?.id) {
       fetchCompatibleProducts();
+      fetchExistingImage();
     }
   }, [product?.id]);
+
+  const fetchExistingImage = async () => {
+    if (!product?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('product_images')
+        .select('image_url')
+        .eq('product_id', product.id)
+        .eq('is_primary', true)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
+      
+      if (data?.image_url) {
+        setExistingImageUrl(data.image_url);
+      }
+    } catch (error) {
+      console.error('Error fetching existing image:', error);
+    }
+  };
 
   const fetchCoreProducts = async () => {
     try {
@@ -130,6 +155,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setExistingImageUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -154,17 +180,32 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
         .from('product-images')
         .getPublicUrl(filePath);
 
-      // Save image record to product_images table
-      const { error: dbError } = await supabase
-        .from('product_images')
-        .insert({
-          product_id: productId,
-          image_url: publicUrl,
-          image_name: fileName,
-          is_primary: true // Set as primary image for now
-        });
+      // Save or update image record in product_images table
+      if (existingImageUrl) {
+        // Update existing image record
+        const { error: dbError } = await supabase
+          .from('product_images')
+          .update({
+            image_url: publicUrl,
+            image_name: fileName
+          })
+          .eq('product_id', productId)
+          .eq('is_primary', true);
 
-      if (dbError) throw dbError;
+        if (dbError) throw dbError;
+      } else {
+        // Insert new image record
+        const { error: dbError } = await supabase
+          .from('product_images')
+          .insert({
+            product_id: productId,
+            image_url: publicUrl,
+            image_name: fileName,
+            is_primary: true
+          });
+
+        if (dbError) throw dbError;
+      }
 
       return publicUrl;
     } catch (error) {
@@ -360,12 +401,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
           <Label>Product Image</Label>
           <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-muted-foreground/50 transition-colors">
             <CardContent className="p-6">
-              {imagePreview ? (
+              {(imagePreview || existingImageUrl) ? (
                 <div className="space-y-4">
                   <div className="relative">
                     <img
-                      src={imagePreview}
-                      alt="Preview"
+                      src={imagePreview || existingImageUrl || ''}
+                      alt={imagePreview ? "New image preview" : "Current product image"}
                       className="w-full h-48 object-cover rounded-lg"
                     />
                     <Button
@@ -378,6 +419,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
+                  {!imagePreview && existingImageUrl && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Current product image - Upload a new image to replace it
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="text-center">
