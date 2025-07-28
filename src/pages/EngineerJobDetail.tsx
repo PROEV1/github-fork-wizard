@@ -24,8 +24,10 @@ import {
   Download,
   Image as ImageIcon,
   ChevronLeft,
-  CheckCircle
+  CheckCircle,
+  RotateCcw
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import JobStatusUpdater from '@/components/engineer/JobStatusUpdater';
 import CompletionChecklist from '@/components/engineer/CompletionChecklist';
 
@@ -335,6 +337,61 @@ export default function EngineerJobDetail() {
     }
   };
 
+  const handleReaccessJob = async () => {
+    if (!jobId) {
+      toast({
+        title: "Error", 
+        description: "Missing job information",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          engineer_signed_off_at: null,
+          engineer_signature_data: null,
+          status: 'in_progress',
+          engineer_status: null
+        })
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      // Log the reaccess activity
+      await supabase.rpc('log_order_activity', {
+        p_order_id: jobId,
+        p_activity_type: 'job_reaccessed',
+        p_description: `Job reaccessed by engineer ${engineerInfo?.name}`,
+        p_details: {
+          engineer_id: engineerInfo?.id,
+          engineer_name: engineerInfo?.name,
+          reaccessed_at: new Date().toISOString()
+        }
+      });
+
+      toast({
+        title: "Job Reaccessed",
+        description: "You can now make changes and updates to this job",
+      });
+
+      // Refresh job details to show editing interfaces
+      fetchJobDetails();
+    } catch (error) {
+      console.error('Error reaccessing job:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reaccess job",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Not scheduled';
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -623,6 +680,41 @@ export default function EngineerJobDetail() {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                <Separator className="my-6" />
+
+                <div className="flex justify-center">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" disabled={saving}>
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Reaccess Job
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reaccess This Job?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will reopen the job for editing. You'll be able to:
+                          <ul className="list-disc list-inside mt-2 space-y-1">
+                            <li>Add more installation images</li>
+                            <li>Update or add engineer notes</li>
+                            <li>Update job status</li>
+                            <li>Re-complete the checklist if needed</li>
+                          </ul>
+                          <br />
+                          The admin team will be notified that this job has been reopened. You'll need to sign off again when finished.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleReaccessJob} disabled={saving}>
+                          {saving ? "Reopening..." : "Reaccess Job"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>
