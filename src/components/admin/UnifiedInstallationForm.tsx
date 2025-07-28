@@ -127,6 +127,18 @@ export function UnifiedInstallationForm({
     try {
       const updateData: any = {};
       
+      // Check if engineer or date is being changed/cleared - reset engineer status
+      const engineerChanging = (formData.engineer_id !== currentEngineerId) || 
+                               (formData.engineer_id === 'none') || 
+                               (!formData.engineer_id);
+      const dateChanging = (formData.scheduled_install_date !== (currentInstallDate ? currentInstallDate.split('T')[0] : '')) ||
+                           (!formData.scheduled_install_date);
+      
+      if (engineerChanging || dateChanging) {
+        updateData.engineer_status = null;
+        console.log('Resetting engineer status due to reschedule - engineer changed:', engineerChanging, 'date changed:', dateChanging);
+      }
+      
       // Only include fields that have values or explicitly set to null
       if (formData.engineer_id && formData.engineer_id !== 'none') {
         updateData.engineer_id = formData.engineer_id;
@@ -151,6 +163,26 @@ export function UnifiedInstallationForm({
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Log engineer status reset if it happened
+      if (updateData.engineer_status === null) {
+        try {
+          await supabase.rpc('log_order_activity', {
+            p_order_id: orderId,
+            p_activity_type: 'engineer_status_reset',
+            p_description: 'Engineer status reset due to rescheduling',
+            p_details: {
+              reason: engineerChanging ? 'engineer_changed' : 'date_changed',
+              previous_engineer: currentEngineerId,
+              new_engineer: formData.engineer_id === 'none' ? null : formData.engineer_id,
+              previous_date: currentInstallDate,
+              new_date: formData.scheduled_install_date
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log engineer status reset:', logError);
+        }
+      }
 
       const isCompleteBooking = hasEngineer && hasDate;
       toast({
@@ -183,11 +215,28 @@ export function UnifiedInstallationForm({
         .update({
           engineer_id: null,
           scheduled_install_date: null,
-          time_window: null
+          time_window: null,
+          engineer_status: null
         })
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Log engineer status reset
+      try {
+        await supabase.rpc('log_order_activity', {
+          p_order_id: orderId,
+          p_activity_type: 'engineer_status_reset',
+          p_description: 'Engineer status reset - schedule cleared',
+          p_details: {
+            reason: 'schedule_cleared',
+            previous_engineer: currentEngineerId,
+            previous_date: currentInstallDate
+          }
+        });
+      } catch (logError) {
+        console.error('Failed to log engineer status reset:', logError);
+      }
 
       // Update local form state
       setFormData(prev => ({
