@@ -8,9 +8,11 @@ interface UnassignedJobsSidebarProps {
   orders: Order[];
   engineers: Engineer[];
   onJobDrop: (orderId: string, engineerId: string, slotInfo: any) => void;
+  onShowRecommendations?: (order: Order) => void;
+  onStartDrag?: (order: Order) => void;
 }
 
-export function UnassignedJobsSidebar({ orders, engineers, onJobDrop }: UnassignedJobsSidebarProps) {
+export function UnassignedJobsSidebar({ orders, engineers, onJobDrop, onShowRecommendations, onStartDrag }: UnassignedJobsSidebarProps) {
   return (
     <Card className="h-fit">
       <CardHeader>
@@ -30,12 +32,14 @@ export function UnassignedJobsSidebar({ orders, engineers, onJobDrop }: Unassign
             <p className="text-xs">All jobs are scheduled!</p>
           </div>
         ) : (
-          orders.map(order => (
+           orders.map(order => (
             <JobCard
               key={order.id}
               order={order}
               engineers={engineers}
               onJobDrop={onJobDrop}
+              onShowRecommendations={onShowRecommendations}
+              onStartDrag={onStartDrag}
               isDraggable
             />
           ))

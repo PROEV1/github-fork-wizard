@@ -59,6 +59,7 @@ export function AdminScheduleCalendar() {
   const [draggedOrder, setDraggedOrder] = useState<Order | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [calendarView, setCalendarView] = useState<'calendar' | 'week'>('calendar');
+  const [draggedJob, setDraggedJob] = useState<Order | null>(null);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -160,6 +161,21 @@ export function AdminScheduleCalendar() {
       setShowRecommendations(true);
     }
   }, [orders]);
+
+  // Handle drops from external sources (sidebar)
+  const handleDropFromOutside = useCallback((dragInfo: any) => {
+    if (draggedJob) {
+      // Calculate slot info from drop position
+      const slot = {
+        start: dragInfo.start || new Date(),
+        end: dragInfo.end || new Date(),
+        resourceId: dragInfo.resourceId
+      };
+      setSelectedSlot(slot);
+      setDraggedOrder(draggedJob);
+      setShowRecommendations(true);
+    }
+  }, [draggedJob]);
 
   // Handle job reassignment
   const handleReassignJob = useCallback(async (orderId: string, engineerId: string, date?: string) => {
@@ -336,6 +352,13 @@ export function AdminScheduleCalendar() {
                   orders={unassignedOrders}
                   engineers={engineers}
                   onJobDrop={handleJobDrop}
+                  onShowRecommendations={(order) => {
+                    setDraggedOrder(order);
+                    setShowRecommendations(true);
+                  }}
+                  onStartDrag={(order) => {
+                    setDraggedJob(order);
+                  }}
                 />
               </div>
 
@@ -382,8 +405,10 @@ export function AdminScheduleCalendar() {
                         onNavigate={setDate}
                         onSelectEvent={handleSelectEvent}
                         onSelectSlot={handleSelectSlot}
+                        onDropFromOutside={handleDropFromOutside}
                         selectable
                         popup
+                        drilldownView={null}
                         components={{
                           event: EventComponent,
                         }}

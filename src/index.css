@@ -250,4 +250,39 @@ All colors MUST be HSL.
   .brand-spinner {
     @apply animate-spin rounded-full h-32 w-32 border-b-2 border-brand-teal;
   }
+
+  /* Custom drag and drop styles */
+  .drop-zone-calendar .rbc-calendar {
+    transition: background-color 0.2s ease;
+  }
+
+  .drop-zone-calendar .rbc-calendar:hover {
+    background-color: hsl(var(--primary) / 0.05);
+  }
+
+  .drop-zone-calendar .rbc-time-view .rbc-time-content {
+    border: 2px dashed transparent;
+    transition: border-color 0.2s ease;
+  }
+
+  .drop-zone-calendar .rbc-time-view .rbc-time-content:hover {
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  /* Drag feedback for job cards */
+  .react-flow__node-dragging {
+    transform: rotate(5deg);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  }
+
+  /* Engineer recommendation panel styles */
+  .engineer-recommendation-panel {
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    background: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  }
 }

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Order, Engineer, getStatusColor } from '@/utils/schedulingUtils';
-import { MapPin, User, Calendar, Clock, Eye, Package, CalendarDays } from 'lucide-react';
+import { MapPin, User, Calendar, Clock, Eye, Package, CalendarDays, Users } from 'lucide-react';
 
 interface JobCardProps {
   order: Order;
@@ -14,9 +14,19 @@ interface JobCardProps {
   onJobDrop?: (orderId: string, engineerId: string, slotInfo: any) => void;
   isDraggable?: boolean;
   showFullDetails?: boolean;
+  onShowRecommendations?: (order: Order) => void;
+  onStartDrag?: (order: Order) => void;
 }
 
-export function JobCard({ order, engineers, onJobDrop, isDraggable = false, showFullDetails = false }: JobCardProps) {
+export function JobCard({ 
+  order, 
+  engineers, 
+  onJobDrop, 
+  isDraggable = false, 
+  showFullDetails = false, 
+  onShowRecommendations,
+  onStartDrag 
+}: JobCardProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'job',
@@ -24,10 +34,13 @@ export function JobCard({ order, engineers, onJobDrop, isDraggable = false, show
       orderId: order.id, 
       order 
     },
+    begin: () => {
+      onStartDrag?.(order);
+    },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }), [order]);
+  }), [order, onStartDrag]);
 
   const statusColor = getStatusColor(order.status_enhanced);
   
@@ -268,12 +281,25 @@ export function JobCard({ order, engineers, onJobDrop, isDraggable = false, show
             </div>
           )}
 
-            {/* Draggable indicator */}
+            {/* Actions for unassigned jobs */}
             {isDraggable && (
-              <div className="text-center mt-2 pt-2 border-t border-border">
-                <span className="text-xs text-muted-foreground">
-                  📍 Drag to assign to calendar
-                </span>
+              <div className="mt-2 pt-2 border-t border-border space-y-2">
+                {onShowRecommendations && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    onClick={() => onShowRecommendations(order)}
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    Show Recommendations
+                  </Button>
+                )}
+                <div className="text-center">
+                  <span className="text-xs text-muted-foreground">
+                    📍 Drag to assign to calendar
+                  </span>
+                </div>
               </div>
             )}
           </div>
