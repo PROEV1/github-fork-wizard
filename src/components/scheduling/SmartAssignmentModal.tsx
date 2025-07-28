@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
-import { Order, Engineer, calculateDistance, calculateTravelTime, getEngineerWorkload } from '@/utils/schedulingUtils';
+import { Order, Engineer, calculateDistance, calculateTravelTime, getEngineerWorkload, extractPostcode } from '@/utils/schedulingUtils';
 import { MapPin, Clock, User, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -55,24 +55,41 @@ export function SmartAssignmentModal({
       const suggestions: EngineerSuggestion[] = [];
 
       for (const engineer of engineers) {
-        const distance = calculateDistance(order.postcode, engineer.region);
-        const travelTime = calculateTravelTime(distance);
-        const workload = await getEngineerWorkload(engineer.id, selectedDate.toISOString().split('T')[0]);
-        
-        // Simple scoring algorithm
-        let score = 100;
-        score -= distance * 0.5; // Penalty for distance
-        score -= workload * 10; // Penalty for existing workload
-        score += engineer.availability ? 20 : -50; // Bonus for availability
+        try {
+          // Extract postcodes from addresses
+          const jobPostcode = extractPostcode(order.job_address) || order.postcode;
+          const engineerPostcode = engineer.starting_postcode;
+          
+          const distance = await calculateDistance(engineerPostcode, jobPostcode);
+          const travelTime = calculateTravelTime(distance);
+          const workload = await getEngineerWorkload(engineer.id, selectedDate.toISOString().split('T')[0]);
+          
+          // Simple scoring algorithm
+          let score = 100;
+          score -= distance * 0.5; // Penalty for distance
+          score -= workload * 10; // Penalty for existing workload
+          score += engineer.availability ? 20 : -50; // Bonus for availability
 
-        suggestions.push({
-          engineer,
-          distance,
-          travelTime,
-          workload,
-          available: engineer.availability && workload < 3, // Max 3 jobs per day
-          score: Math.max(0, score)
-        });
+          suggestions.push({
+            engineer,
+            distance,
+            travelTime,
+            workload,
+            available: engineer.availability && workload < 3, // Max 3 jobs per day
+            score: Math.max(0, score)
+          });
+        } catch (error) {
+          console.error(`Error calculating suggestion for engineer ${engineer.id}:`, error);
+          // Add fallback suggestion with default values
+          suggestions.push({
+            engineer,
+            distance: 10,
+            travelTime: 20,
+            workload: 0,
+            available: engineer.availability || false,
+            score: 50
+          });
+        }
       }
 
       // Sort by score (highest first)
@@ -82,7 +99,7 @@ export function SmartAssignmentModal({
     };
 
     calculateSuggestions();
-  }, [selectedDate, engineers, order.postcode]);
+  }, [selectedDate, engineers, order.postcode, order.job_address]);
 
   const handleAssign = async () => {
     if (!selectedEngineerId || !selectedDate) {
