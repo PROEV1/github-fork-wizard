@@ -121,11 +121,9 @@ export function JobStatusCard({ job, onActionClick }: JobStatusCardProps) {
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               {job.scheduled_install_date ? (
-                <span>
-                  {formatDateOnly(job.scheduled_install_date)} at {formatTimeSlot(job.scheduled_install_date)}
-                </span>
+                <span>{formatDateOnly(job.scheduled_install_date)}</span>
               ) : (
-                <span className="text-muted-foreground">Time TBC</span>
+                <span className="text-muted-foreground">Date TBC</span>
               )}
             </div>
             
