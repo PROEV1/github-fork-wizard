@@ -72,17 +72,27 @@ serve(async (req) => {
       const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cleanPostcode)}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=GB&types=postcode`
       console.log(`Geocoding URL: ${geocodeUrl}`)
       
+      // Test the actual fetch call with detailed logging
+      console.log('About to make fetch request...')
       const response = await fetch(geocodeUrl)
-      const data = await response.json()
-      
-      console.log(`Geocoding response for ${cleanPostcode}:`, { 
-        status: response.status, 
-        features: data.features?.length || 0,
-        firstFeature: data.features?.[0]
+      console.log('Fetch completed, response received:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       })
       
+      const data = await response.json()
+      console.log(`Geocoding response data:`, data)
+      
       if (!response.ok) {
-        throw new Error(`Geocoding API error for ${cleanPostcode}: ${response.status} ${response.statusText}`)
+        console.error(`Geocoding API error details:`, {
+          postcode: cleanPostcode,
+          status: response.status,
+          statusText: response.statusText,
+          responseData: data
+        })
+        throw new Error(`Geocoding API error for ${cleanPostcode}: ${response.status} ${response.statusText} - ${JSON.stringify(data)}`)
       }
       
       if (!data.features?.length) {
