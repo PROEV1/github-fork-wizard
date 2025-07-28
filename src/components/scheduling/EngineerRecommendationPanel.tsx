@@ -143,14 +143,14 @@ export function EngineerRecommendationPanel({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-2">
+                <div className="grid grid-cols-1 gap-1 text-xs text-muted-foreground mb-2">
                   <div className="flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
-                    <span>{suggestion.distance.toFixed(1)}mi</span>
+                    <span>{suggestion.distance.toFixed(1)}mi from {suggestion.engineer.starting_postcode || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    <span>{suggestion.travelTime}min</span>
+                    <span>{suggestion.travelTime}min travel time</span>
                   </div>
                 </div>
 

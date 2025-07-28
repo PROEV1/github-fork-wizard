@@ -25,8 +25,14 @@ serve(async (req) => {
 
     const { origins, destinations }: DistanceRequest = await req.json()
     
+    console.log('Mapbox Distance API called with:', { origins, destinations })
+    
     if (!origins?.length || !destinations?.length) {
       throw new Error('Origins and destinations are required')
+    }
+    
+    if (origins.length === 0 || destinations.length === 0) {
+      throw new Error('Not enough input sources and destinations given')
     }
 
     // Convert postcodes to coordinates using Mapbox Geocoding API
@@ -72,11 +78,16 @@ serve(async (req) => {
     // Call Mapbox Matrix API
     const matrixUrl = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordinatesParam}?sources=${sources}&destinations=${destinationsParam}&access_token=${MAPBOX_ACCESS_TOKEN}`
     
+    console.log('Matrix API URL:', matrixUrl)
+    console.log('Coordinates:', { originCoords, destinationCoords, sources, destinationsParam })
+    
     const matrixResponse = await fetch(matrixUrl)
     const matrixData = await matrixResponse.json()
     
+    console.log('Matrix API response:', { status: matrixResponse.status, data: matrixData })
+    
     if (!matrixResponse.ok) {
-      throw new Error(`Mapbox API error: ${matrixData.message}`)
+      throw new Error(`Mapbox API error: ${matrixData.message || matrixData.error}`)
     }
 
     // Convert distances from meters to miles and durations from seconds to minutes

@@ -60,21 +60,27 @@ const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 export const calculateDistance = async (postcode1?: string, postcode2?: string): Promise<number> => {
   if (!postcode1 || !postcode2) return 10; // Default distance
   
+  const cleanPostcode1 = postcode1.trim().toUpperCase();
+  const cleanPostcode2 = postcode2.trim().toUpperCase();
+  
+  console.log(`Calculating distance between ${cleanPostcode1} and ${cleanPostcode2}`);
+  
   // Create cache key
-  const cacheKey = `${postcode1.trim().toUpperCase()}-${postcode2.trim().toUpperCase()}`;
-  const reverseKey = `${postcode2.trim().toUpperCase()}-${postcode1.trim().toUpperCase()}`;
+  const cacheKey = `${cleanPostcode1}-${cleanPostcode2}`;
+  const reverseKey = `${cleanPostcode2}-${cleanPostcode1}`;
   
   // Check cache first
   const cached = distanceCache.get(cacheKey) || distanceCache.get(reverseKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log(`Using cached distance: ${cached.distance} miles`);
     return cached.distance;
   }
   
   try {
     const { data, error } = await supabase.functions.invoke('mapbox-distance', {
       body: {
-        origins: [postcode1],
-        destinations: [postcode2]
+        origins: [cleanPostcode1],
+        destinations: [cleanPostcode2]
       }
     });
     
@@ -82,6 +88,8 @@ export const calculateDistance = async (postcode1?: string, postcode2?: string):
     
     const distance = data.distances[0][0];
     const duration = data.durations[0][0];
+    
+    console.log(`Mapbox API returned: ${distance} miles, ${duration} minutes`);
     
     // Cache the result
     distanceCache.set(cacheKey, { distance, duration, timestamp: Date.now() });
@@ -91,31 +99,40 @@ export const calculateDistance = async (postcode1?: string, postcode2?: string):
     console.error('Mapbox distance calculation failed, using fallback:', error);
     
     // Fallback to mock calculation
-    return calculateDistanceFallback(postcode1, postcode2);
+    const fallbackDistance = calculateDistanceFallback(cleanPostcode1, cleanPostcode2);
+    console.log(`Using fallback distance: ${fallbackDistance} miles`);
+    return fallbackDistance;
   }
 };
 
 // Fallback distance calculation for when Mapbox API fails
 const calculateDistanceFallback = (postcode1: string, postcode2: string): number => {
-  // Extract postcode areas (first part before space or first 2-3 characters)
-  const area1 = postcode1.split(' ')[0] || postcode1.substring(0, 3);
-  const area2 = postcode2.split(' ')[0] || postcode2.substring(0, 3);
+  // Extract postcode areas (first part before space or first 2-4 characters)
+  const area1 = postcode1.split(' ')[0] || postcode1.substring(0, postcode1.length >= 4 ? 4 : 3);
+  const area2 = postcode2.split(' ')[0] || postcode2.substring(0, postcode2.length >= 4 ? 4 : 3);
+  
+  console.log(`Fallback calculation: ${area1} to ${area2}`);
   
   // Simple distance estimation based on postcode areas
   if (area1 === area2) return 2; // Same area, very close
   
   // Enhanced distance lookup table for UK postcode areas
   const distanceMap: Record<string, Record<string, number>> = {
-    'M1': { 'M2': 5, 'M3': 8, 'B1': 85, 'L1': 35, 'LS': 45 },
-    'M2': { 'M1': 5, 'M3': 10, 'B1': 90, 'L1': 40, 'LS': 50 },
-    'B1': { 'M1': 85, 'M2': 90, 'B2': 10, 'L1': 120, 'LS': 130 },
-    'L1': { 'M1': 35, 'M2': 40, 'B1': 120, 'LS': 75 },
-    'LS': { 'M1': 45, 'M2': 50, 'B1': 130, 'L1': 75 }
+    'M1': { 'M2': 5, 'M3': 8, 'B1': 85, 'L1': 35, 'LS': 45, 'MK': 65, 'MK17': 65 },
+    'M2': { 'M1': 5, 'M3': 10, 'B1': 90, 'L1': 40, 'LS': 50, 'MK': 70, 'MK17': 70 },
+    'B1': { 'M1': 85, 'M2': 90, 'B2': 10, 'L1': 120, 'LS': 130, 'MK': 45, 'MK17': 45 },
+    'L1': { 'M1': 35, 'M2': 40, 'B1': 120, 'LS': 75, 'MK': 95, 'MK17': 95 },
+    'LS': { 'M1': 45, 'M2': 50, 'B1': 130, 'L1': 75, 'MK': 85, 'MK17': 85 },
+    'MK': { 'M1': 65, 'M2': 70, 'B1': 45, 'L1': 95, 'LS': 85, 'MK17': 5 },
+    'MK17': { 'M1': 65, 'M2': 70, 'B1': 45, 'L1': 95, 'LS': 85, 'MK': 5 }
   };
   
   // Try exact match first
-  const exactDistance = distanceMap[area1]?.[area2];
-  if (exactDistance) return exactDistance;
+  const exactDistance = distanceMap[area1]?.[area2] || distanceMap[area2]?.[area1];
+  if (exactDistance) {
+    console.log(`Found exact match: ${exactDistance} miles`);
+    return exactDistance;
+  }
   
   // Fallback to similarity-based distance
   const similarity = calculatePostcodeSimilarity(area1, area2);
