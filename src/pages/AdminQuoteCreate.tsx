@@ -200,8 +200,20 @@ export default function AdminQuoteCreate() {
       
       // Validate selected products have valid quantities
       for (const sp of selectedProducts) {
+        console.log('Validating product:', {
+          productName: sp.product.name,
+          quantity: sp.quantity,
+          quantityType: typeof sp.quantity,
+          totalPrice: sp.totalPrice,
+          totalPriceType: typeof sp.totalPrice
+        });
+        
         if (!Number.isInteger(sp.quantity) || sp.quantity <= 0) {
-          throw new Error(`Invalid quantity for product ${sp.product.name}: ${sp.quantity}`);
+          throw new Error(`Invalid quantity for product ${sp.product.name}: ${sp.quantity} (type: ${typeof sp.quantity})`);
+        }
+        
+        if (isNaN(sp.totalPrice) || sp.totalPrice <= 0) {
+          throw new Error(`Invalid total price for product ${sp.product.name}: ${sp.totalPrice}`);
         }
       }
       
@@ -210,6 +222,14 @@ export default function AdminQuoteCreate() {
         const configText = Object.entries(sp.configuration).map(([type, value]) => `${type}: ${value}`).join(', ');
         return `${sp.product.name} (Qty: ${sp.quantity})${configText ? ` - ${configText}` : ''}`;
       }).join('\n');
+      
+      console.log('About to insert quote with data:', {
+        client_id: formData.client_id,
+        total_cost: totalCost,
+        deposit_required: depositRequired,
+        expires_at: expiresAt,
+        productDetails: productDetails.substring(0, 100) + '...'
+      });
       
       const { data: quote, error: quoteError } = await supabase
         .from('quotes')
@@ -238,21 +258,31 @@ export default function AdminQuoteCreate() {
       if (quoteError) throw quoteError;
 
       // Create quote items with validated data
-      const quoteItems = selectedProducts.map(sp => ({
-        quote_id: quote.id,
-        product_id: sp.product.id,
-        product_name: sp.product.name,
-        quantity: parseInt(String(sp.quantity)), // Ensure integer
-        unit_price: Number(sp.product.base_price),
-        total_price: Number(sp.totalPrice),
-        configuration: sp.configuration
-      }));
+      const quoteItems = selectedProducts.map(sp => {
+        const item = {
+          quote_id: quote.id,
+          product_id: sp.product.id,
+          product_name: sp.product.name,
+          quantity: parseInt(String(sp.quantity)), // Ensure integer
+          unit_price: Number(sp.product.base_price),
+          total_price: Number(sp.totalPrice),
+          configuration: sp.configuration
+        };
+        
+        console.log('Creating quote item:', item);
+        return item;
+      });
+
+      console.log('About to insert quote items:', quoteItems);
 
       const { error: itemsError } = await supabase
         .from('quote_items')
         .insert(quoteItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Quote items insert error:', itemsError);
+        throw itemsError;
+      }
 
       toast({
         title: "Success",

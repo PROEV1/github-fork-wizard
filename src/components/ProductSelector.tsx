@@ -455,7 +455,12 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                     type="number"
                     min="1"
                     value={currentQuantity}
-                    onChange={(e) => setCurrentQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const parsed = parseInt(value);
+                      console.log('Quantity input change:', { value, parsed, isValidInteger: Number.isInteger(parsed) });
+                      setCurrentQuantity(Math.max(1, Number.isInteger(parsed) ? parsed : 1));
+                    }}
                     className="w-20 text-center"
                   />
                   <Button
