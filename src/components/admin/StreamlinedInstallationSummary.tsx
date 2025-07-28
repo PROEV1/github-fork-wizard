@@ -132,21 +132,33 @@ export function StreamlinedInstallationSummary({
     setIsLoading(true);
     try {
       let updates: any = {};
+      let needsArchival = false;
+      let resetReason = '';
       
       switch (field) {
         case 'engineer':
           updates.engineer_id = editValues.engineerId === 'none' ? null : editValues.engineerId || null;
-          // Reset engineer sign-off when engineer changes
+          // Check if engineer is changing and there's existing work
+          if (editValues.engineerId !== currentEngineerId && engineer && currentInstallDate) {
+            needsArchival = true;
+            resetReason = 'engineer_changed';
+          }
           updates.engineer_signed_off_at = null;
           updates.engineer_signature_data = null;
           updates.engineer_status = null;
+          updates.engineer_notes = null;
           break;
         case 'date':
           updates.scheduled_install_date = editValues.installDate ? new Date(editValues.installDate).toISOString() : null;
-          // Reset engineer sign-off when date changes
+          // Check if date is changing and there's existing work
+          if (editValues.installDate !== (currentInstallDate ? currentInstallDate.split('T')[0] : '') && engineer && currentInstallDate) {
+            needsArchival = true;
+            resetReason = 'rescheduled';
+          }
           updates.engineer_signed_off_at = null;
           updates.engineer_signature_data = null;
           updates.engineer_status = null;
+          updates.engineer_notes = null;
           break;
         case 'timeWindow':
           updates.time_window = editValues.timeWindow === 'none' ? null : editValues.timeWindow || null;
@@ -159,12 +171,62 @@ export function StreamlinedInstallationSummary({
           break;
       }
 
+      // Archive engineer work if needed (before clearing)
+      if (needsArchival) {
+        const { error: archiveError } = await supabase.rpc('archive_engineer_work', {
+          p_order_id: orderId,
+          p_reset_reason: resetReason,
+          p_scheduled_date_after: updates.scheduled_install_date || null
+        });
+        
+        if (archiveError) {
+          console.error('Archive error:', archiveError);
+        }
+      }
+
+      // Reset completion checklist if engineer work is being reset
+      if (needsArchival) {
+        const { error: checklistError } = await supabase
+          .from('order_completion_checklist')
+          .update({ 
+            is_completed: false, 
+            completed_at: null 
+          })
+          .eq('order_id', orderId);
+          
+        if (checklistError) {
+          console.error('Checklist reset error:', checklistError);
+        }
+      }
+
       const { error } = await supabase
         .from('orders')
         .update(updates)
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Enhanced activity logging for engineer/date changes
+      if (needsArchival) {
+        const description = `${resetReason === 'engineer_changed' ? 'Engineer reassigned' : 'Installation rescheduled'} - Previous work archived and engineer workspace reset`;
+        
+        try {
+          await supabase.rpc('log_order_activity', {
+            p_order_id: orderId,
+            p_activity_type: 'engineer_status_reset',
+            p_description: description,
+            p_details: {
+              field_changed: field,
+              reset_reason: resetReason,
+              engineer_work_archived: true,
+              checklist_reset: true,
+              notes_cleared: true
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log engineer status reset:', logError);
+        }
+      }
 
       toast({
         title: "Updated",
@@ -204,6 +266,31 @@ export function StreamlinedInstallationSummary({
 
     setIsLoading(true);
     try {
+      // Archive engineer work if there was any completed work
+      if (engineer && currentInstallDate) {
+        const { error: archiveError } = await supabase.rpc('archive_engineer_work', {
+          p_order_id: orderId,
+          p_reset_reason: 'assignment_cleared'
+        });
+        
+        if (archiveError) {
+          console.error('Archive error:', archiveError);
+        }
+      }
+
+      // Reset completion checklist
+      const { error: checklistError } = await supabase
+        .from('order_completion_checklist')
+        .update({ 
+          is_completed: false, 
+          completed_at: null 
+        })
+        .eq('order_id', orderId);
+        
+      if (checklistError) {
+        console.error('Checklist reset error:', checklistError);
+      }
+
       const { error } = await supabase
         .from('orders')
         .update({
@@ -211,11 +298,34 @@ export function StreamlinedInstallationSummary({
           scheduled_install_date: null,
           time_window: null,
           estimated_duration_hours: null,
-          internal_install_notes: null
+          internal_install_notes: null,
+          engineer_signed_off_at: null,
+          engineer_signature_data: null,
+          engineer_status: null,
+          engineer_notes: null
         })
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Enhanced activity logging
+      if (engineer && currentInstallDate) {
+        try {
+          await supabase.rpc('log_order_activity', {
+            p_order_id: orderId,
+            p_activity_type: 'engineer_status_reset',
+            p_description: 'Installation assignment cleared - Previous work archived and engineer workspace reset',
+            p_details: {
+              reset_reason: 'assignment_cleared',
+              engineer_work_archived: true,
+              checklist_reset: true,
+              notes_cleared: true
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log engineer status reset:', logError);
+        }
+      }
 
       toast({
         title: "Assignment Deleted",
@@ -239,15 +349,52 @@ export function StreamlinedInstallationSummary({
     setIsLoading(true);
     try {
       const updateData: any = {};
+      let needsArchival = false;
+      let resetReason = '';
       
       // Check if engineer or date is changing - reset engineer sign-off if so
       const engineerChanging = editData.engineer_id !== currentEngineerId;
       const dateChanging = editData.scheduled_install_date !== (currentInstallDate ? currentInstallDate.split('T')[0] : '');
       
+      // Check if we need to archive (there's existing engineer work to preserve)
+      if ((engineerChanging || dateChanging) && engineer && currentInstallDate) {
+        needsArchival = true;
+        resetReason = engineerChanging ? 'engineer_changed' : 'rescheduled';
+      }
+      
+      // Archive engineer work if needed (before clearing)
+      if (needsArchival) {
+        const { error: archiveError } = await supabase.rpc('archive_engineer_work', {
+          p_order_id: orderId,
+          p_reset_reason: resetReason,
+          p_scheduled_date_after: editData.scheduled_install_date || null
+        });
+        
+        if (archiveError) {
+          console.error('Archive error:', archiveError);
+        }
+      }
+      
       if (engineerChanging || dateChanging) {
         updateData.engineer_signed_off_at = null;
         updateData.engineer_signature_data = null;
         updateData.engineer_status = null;
+        updateData.engineer_notes = null;
+      }
+      
+      // Reset completion checklist if engineer work is being reset
+      if (needsArchival) {
+        const { error: checklistError } = await supabase
+          .from('order_completion_checklist')
+          .update({ 
+            is_completed: false, 
+            completed_at: null 
+          })
+          .eq('order_id', orderId);
+          
+        if (checklistError) {
+          console.error('Checklist reset error:', checklistError);
+        }
       }
       
       if (editData.engineer_id) updateData.engineer_id = editData.engineer_id;
@@ -264,19 +411,26 @@ export function StreamlinedInstallationSummary({
 
       if (error) throw error;
 
-      // Log activity if engineer sign-off was reset
+      // Enhanced activity logging
       if (updateData.engineer_signed_off_at === null) {
+        const description = needsArchival 
+          ? `${resetReason === 'engineer_changed' ? 'Engineer reassigned' : 'Installation rescheduled'} - Previous work archived and engineer workspace reset`
+          : 'Engineer status reset due to rescheduling';
+          
         try {
           await supabase.rpc('log_order_activity', {
             p_order_id: orderId,
             p_activity_type: 'engineer_status_reset',
-            p_description: 'Engineer status reset due to rescheduling',
+            p_description: description,
             p_details: {
               reason: engineerChanging ? 'engineer_changed' : 'date_changed',
               previous_engineer: currentEngineerId,
               new_engineer: editData.engineer_id,
               previous_date: currentInstallDate,
-              new_date: editData.scheduled_install_date
+              new_date: editData.scheduled_install_date,
+              engineer_work_archived: needsArchival,
+              checklist_reset: needsArchival,
+              notes_cleared: needsArchival
             }
           });
         } catch (logError) {

@@ -134,11 +134,48 @@ export function UnifiedInstallationForm({
       const dateChanging = (formData.scheduled_install_date !== (currentInstallDate ? currentInstallDate.split('T')[0] : '')) ||
                            (!formData.scheduled_install_date);
       
+      let needsArchival = false;
+      let resetReason = '';
+
+      // Check if we need to archive (there's existing engineer work to preserve)
+      if ((engineerChanging || dateChanging) && currentEngineerId && currentInstallDate) {
+        needsArchival = true;
+        resetReason = engineerChanging ? 'engineer_changed' : 'rescheduled';
+      }
+
+      // Archive engineer work if needed (before clearing)
+      if (needsArchival) {
+        const { error: archiveError } = await supabase.rpc('archive_engineer_work', {
+          p_order_id: orderId,
+          p_reset_reason: resetReason,
+          p_scheduled_date_after: formData.scheduled_install_date || null
+        });
+        
+        if (archiveError) {
+          console.error('Archive error:', archiveError);
+        }
+      }
+      
       if (engineerChanging || dateChanging) {
         updateData.engineer_signed_off_at = null;
         updateData.engineer_signature_data = null;
         updateData.engineer_status = null;
-        console.log('Resetting engineer sign-off due to reschedule - engineer changed:', engineerChanging, 'date changed:', dateChanging);
+        updateData.engineer_notes = null;
+      }
+
+      // Reset completion checklist if engineer work is being reset
+      if (needsArchival) {
+        const { error: checklistError } = await supabase
+          .from('order_completion_checklist')
+          .update({ 
+            is_completed: false, 
+            completed_at: null 
+          })
+          .eq('order_id', orderId);
+          
+        if (checklistError) {
+          console.error('Checklist reset error:', checklistError);
+        }
       }
       
       // Only include fields that have values or explicitly set to null
@@ -166,19 +203,26 @@ export function UnifiedInstallationForm({
 
       if (error) throw error;
 
-      // Log engineer sign-off reset if it happened
+      // Enhanced activity logging
       if (updateData.engineer_signed_off_at === null) {
+        const description = needsArchival 
+          ? `${resetReason === 'engineer_changed' ? 'Engineer reassigned' : 'Installation rescheduled'} - Previous work archived and engineer workspace reset`
+          : 'Engineer sign-off reset due to rescheduling';
+          
         try {
           await supabase.rpc('log_order_activity', {
             p_order_id: orderId,
             p_activity_type: 'engineer_status_reset',
-            p_description: 'Engineer sign-off reset due to rescheduling',
+            p_description: description,
             p_details: {
               reason: engineerChanging ? 'engineer_changed' : 'date_changed',
               previous_engineer: currentEngineerId,
               new_engineer: formData.engineer_id === 'none' ? null : formData.engineer_id,
               previous_date: currentInstallDate,
-              new_date: formData.scheduled_install_date
+              new_date: formData.scheduled_install_date,
+              engineer_work_archived: needsArchival,
+              checklist_reset: needsArchival,
+              notes_cleared: needsArchival
             }
           });
         } catch (logError) {
@@ -212,6 +256,31 @@ export function UnifiedInstallationForm({
     
     setIsLoading(true);
     try {
+      // Archive engineer work if there was any completed work
+      if (currentEngineerId && currentInstallDate) {
+        const { error: archiveError } = await supabase.rpc('archive_engineer_work', {
+          p_order_id: orderId,
+          p_reset_reason: 'schedule_cleared'
+        });
+        
+        if (archiveError) {
+          console.error('Archive error:', archiveError);
+        }
+      }
+
+      // Reset completion checklist
+      const { error: checklistError } = await supabase
+        .from('order_completion_checklist')
+        .update({ 
+          is_completed: false, 
+          completed_at: null 
+        })
+        .eq('order_id', orderId);
+        
+      if (checklistError) {
+        console.error('Checklist reset error:', checklistError);
+      }
+
       const { error } = await supabase
         .from('orders')
         .update({
@@ -220,26 +289,32 @@ export function UnifiedInstallationForm({
           time_window: null,
           engineer_signed_off_at: null,
           engineer_signature_data: null,
-          engineer_status: null
+          engineer_status: null,
+          engineer_notes: null
         })
         .eq('id', orderId);
 
       if (error) throw error;
 
-      // Log engineer sign-off reset
-      try {
-        await supabase.rpc('log_order_activity', {
-          p_order_id: orderId,
-          p_activity_type: 'engineer_status_reset',
-          p_description: 'Engineer sign-off reset - schedule cleared',
-          p_details: {
-            reason: 'schedule_cleared',
-            previous_engineer: currentEngineerId,
-            previous_date: currentInstallDate
-          }
-        });
-      } catch (logError) {
-        console.error('Failed to log engineer sign-off reset:', logError);
+      // Enhanced activity logging
+      if (currentEngineerId && currentInstallDate) {
+        try {
+          await supabase.rpc('log_order_activity', {
+            p_order_id: orderId,
+            p_activity_type: 'engineer_status_reset',
+            p_description: 'Installation schedule cleared - Previous work archived and engineer workspace reset',
+            p_details: {
+              reason: 'schedule_cleared',
+              previous_engineer: currentEngineerId,
+              previous_date: currentInstallDate,
+              engineer_work_archived: true,
+              checklist_reset: true,
+              notes_cleared: true
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log engineer status reset:', logError);
+        }
       }
 
       // Update local form state

@@ -71,6 +71,60 @@ export type Database = {
         }
         Relationships: []
       }
+      engineer_audit_archive: {
+        Row: {
+          archived_at: string
+          checklist_items: Json | null
+          created_at: string
+          engineer_id: string | null
+          engineer_notes: string | null
+          engineer_signature_data: string | null
+          engineer_signed_off_at: string | null
+          engineer_status: string | null
+          id: string
+          order_id: string
+          reset_by: string | null
+          reset_reason: string
+          scheduled_date_after: string | null
+          scheduled_date_before: string | null
+          uploads_snapshot: Json | null
+        }
+        Insert: {
+          archived_at?: string
+          checklist_items?: Json | null
+          created_at?: string
+          engineer_id?: string | null
+          engineer_notes?: string | null
+          engineer_signature_data?: string | null
+          engineer_signed_off_at?: string | null
+          engineer_status?: string | null
+          id?: string
+          order_id: string
+          reset_by?: string | null
+          reset_reason: string
+          scheduled_date_after?: string | null
+          scheduled_date_before?: string | null
+          uploads_snapshot?: Json | null
+        }
+        Update: {
+          archived_at?: string
+          checklist_items?: Json | null
+          created_at?: string
+          engineer_id?: string | null
+          engineer_notes?: string | null
+          engineer_signature_data?: string | null
+          engineer_signed_off_at?: string | null
+          engineer_status?: string | null
+          id?: string
+          order_id?: string
+          reset_by?: string | null
+          reset_reason?: string
+          scheduled_date_after?: string | null
+          scheduled_date_before?: string | null
+          uploads_snapshot?: Json | null
+        }
+        Relationships: []
+      }
       engineer_uploads: {
         Row: {
           description: string | null
@@ -1166,6 +1220,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_engineer_work: {
+        Args: {
+          p_order_id: string
+          p_reset_reason: string
+          p_reset_by?: string
+          p_scheduled_date_after?: string
+        }
+        Returns: string
+      }
       calculate_order_status: {
         Args: { order_row: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: Database["public"]["Enums"]["order_status_enhanced"]
