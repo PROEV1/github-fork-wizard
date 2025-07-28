@@ -25,7 +25,8 @@ import {
   Image as ImageIcon,
   ChevronLeft,
   CheckCircle,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import JobStatusUpdater from '@/components/engineer/JobStatusUpdater';
@@ -267,6 +268,39 @@ export default function EngineerJobDetail() {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteImage = async (uploadId: string, filePath: string) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('engineer-uploads')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('engineer_uploads')
+        .delete()
+        .eq('id', uploadId);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Image deleted",
+        description: "Installation image removed successfully",
+      });
+
+      fetchUploads();
+    } catch (error) {
+      console.error('Error deleting image:', error);
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete image. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -534,11 +568,24 @@ export default function EngineerJobDetail() {
                         
                         {existingUpload ? (
                           <div className="space-y-2">
-                            <img 
-                              src={existingUpload.file_url} 
-                              alt={type.label}
-                              className="w-full h-32 object-cover rounded"
-                            />
+                            <div className="relative">
+                              <img 
+                                src={existingUpload.file_url} 
+                                alt={type.label}
+                                className="w-full h-32 object-cover rounded"
+                              />
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-1 right-1"
+                                onClick={() => {
+                                  const fileName = existingUpload.file_url.split('/').pop();
+                                  handleDeleteImage(existingUpload.id, `order-${jobId}/${fileName}`);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               {new Date(existingUpload.uploaded_at).toLocaleDateString()}
                             </p>
