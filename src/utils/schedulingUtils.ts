@@ -65,83 +65,79 @@ export const clearDistanceCache = () => {
 // Enhanced distance calculation using Mapbox API - now uses actual order postcodes
 export const calculateDistance = async (postcode1?: string, postcode2?: string): Promise<number> => {
   if (!postcode1 || !postcode2) {
-    console.log('Missing postcode(s), returning default distance');
-    return 10; // Default distance
+    console.error('❌ Missing postcode(s):', { postcode1, postcode2 });
+    throw new Error('Both postcodes are required for distance calculation');
   }
   
   const cleanPostcode1 = postcode1.trim().toUpperCase();
   const cleanPostcode2 = postcode2.trim().toUpperCase();
   
-  console.log(`=== Distance Calculation ===`);
-  console.log(`From: ${cleanPostcode1} | To: ${cleanPostcode2}`);
+  console.log(`🚀 === DISTANCE CALCULATION START ===`);
+  console.log(`📍 From: "${cleanPostcode1}" | To: "${cleanPostcode2}"`);
+  
+  // Clear cache to force fresh calculation
+  const cacheKey = `${cleanPostcode1}-${cleanPostcode2}`;
+  const reverseKey = `${cleanPostcode2}-${cleanPostcode1}`;
+  distanceCache.delete(cacheKey);
+  distanceCache.delete(reverseKey);
+  console.log('🗑️ Cache cleared for fresh calculation');
   
   // Check for exact match (same postcode should be very close)
   if (cleanPostcode1 === cleanPostcode2) {
-    console.log('Same postcodes - returning 0.5 miles');
+    console.log('✅ Same postcodes - returning 0.5 miles');
     return 0.5;
   }
   
-  // Create cache key
-  const cacheKey = `${cleanPostcode1}-${cleanPostcode2}`;
-  const reverseKey = `${cleanPostcode2}-${cleanPostcode1}`;
+  console.log('📡 Calling Mapbox API edge function...');
+  console.log('📦 Request payload:', JSON.stringify({
+    origins: [cleanPostcode1],
+    destinations: [cleanPostcode2]
+  }, null, 2));
   
-  // Check cache first
-  const cached = distanceCache.get(cacheKey) || distanceCache.get(reverseKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log(`Using cached distance: ${cached.distance} miles (method: ${cached.method})`);
-    return cached.distance;
+  const { data, error } = await supabase.functions.invoke('mapbox-distance', {
+    body: {
+      origins: [cleanPostcode1],
+      destinations: [cleanPostcode2]
+    }
+  });
+  
+  console.log('📨 Raw Mapbox response:', { data, error });
+  
+  if (error) {
+    console.error('❌ Mapbox function error:', error);
+    throw new Error(`Mapbox API error: ${JSON.stringify(error)}`);
   }
   
-  try {
-    console.log('Calling Mapbox API...');
-    const { data, error } = await supabase.functions.invoke('mapbox-distance', {
-      body: {
-        origins: [cleanPostcode1],
-        destinations: [cleanPostcode2]
-      }
-    });
-    
-    if (error) {
-      console.error('Mapbox function error:', error);
-      throw error;
-    }
-    
-    if (!data || !data.distances || !data.distances[0] || data.distances[0][0] === undefined) {
-      console.error('Invalid Mapbox response structure:', data);
-      throw new Error('Invalid response from Mapbox API');
-    }
-    
-    const distance = data.distances[0][0];
-    const duration = data.durations?.[0]?.[0] || 30;
-    
-    console.log(`✅ Mapbox API success: ${distance} miles, ${duration} minutes`);
-    
-    // Cache the result
-    distanceCache.set(cacheKey, { 
-      distance, 
-      duration, 
-      timestamp: Date.now(),
-      method: 'mapbox'
-    });
-    
-    return distance;
-  } catch (error) {
-    console.error('❌ Mapbox distance calculation failed:', error);
-    
-    // Fallback to mock calculation
-    const fallbackDistance = calculateDistanceFallback(cleanPostcode1, cleanPostcode2);
-    console.log(`🔄 Using fallback distance: ${fallbackDistance} miles`);
-    
-    // Cache the fallback result
-    distanceCache.set(cacheKey, { 
-      distance: fallbackDistance, 
-      duration: Math.round(fallbackDistance * 2.5), 
-      timestamp: Date.now(),
-      method: 'fallback'
-    });
-    
-    return fallbackDistance;
+  if (!data) {
+    console.error('❌ No data returned from Mapbox function');
+    throw new Error('No data returned from Mapbox API');
   }
+  
+  if (!data.distances || !Array.isArray(data.distances)) {
+    console.error('❌ Invalid distances structure:', data);
+    throw new Error(`Invalid response structure: ${JSON.stringify(data)}`);
+  }
+  
+  if (!data.distances[0] || data.distances[0][0] === undefined) {
+    console.error('❌ Missing distance value:', data.distances);
+    throw new Error(`Missing distance value in response: ${JSON.stringify(data.distances)}`);
+  }
+  
+  const distance = data.distances[0][0];
+  const duration = data.durations?.[0]?.[0] || Math.round(distance * 2.5);
+  
+  console.log(`✅ SUCCESS: ${distance} miles, ${duration} minutes`);
+  console.log(`🏁 === DISTANCE CALCULATION END ===`);
+  
+  // Cache the result
+  distanceCache.set(cacheKey, { 
+    distance, 
+    duration, 
+    timestamp: Date.now(),
+    method: 'mapbox'
+  });
+  
+  return distance;
 };
 
 // Fallback distance calculation for when Mapbox API fails

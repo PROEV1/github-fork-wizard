@@ -59,7 +59,11 @@ export function EngineerRecommendationPanel({
   };
 
   const handleRefreshWithClearCache = async () => {
+    console.log('🔄 CLEARING CACHE AND FORCING REFRESH');
     clearDistanceCache();
+    setLoading(true);
+    setSuggestions([]);
+    setDebugInfo('Cache cleared - forcing fresh Mapbox API calls...');
     await loadSmartRecommendations();
   };
 
