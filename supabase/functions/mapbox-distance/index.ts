@@ -20,52 +20,103 @@ serve(async (req) => {
 
   try {
     if (!MAPBOX_ACCESS_TOKEN) {
+      console.error('MAPBOX_ACCESS_TOKEN not configured')
       throw new Error('MAPBOX_ACCESS_TOKEN not configured')
     }
 
-    const { origins, destinations }: DistanceRequest = await req.json()
+    const body = await req.json()
+    const { origins, destinations }: DistanceRequest = body
     
-    console.log('Mapbox Distance API called with:', { origins, destinations })
+    console.log('=== Mapbox Distance API Called ===')
+    console.log('Raw request body:', JSON.stringify(body))
+    console.log('Parsed origins:', origins)
+    console.log('Parsed destinations:', destinations)
+    console.log('Origins type:', typeof origins, 'Array?', Array.isArray(origins))
+    console.log('Destinations type:', typeof destinations, 'Array?', Array.isArray(destinations))
     
-    if (!origins?.length || !destinations?.length) {
+    if (!origins || !destinations) {
+      console.error('Missing origins or destinations:', { origins, destinations })
       throw new Error('Origins and destinations are required')
     }
     
+    if (!Array.isArray(origins) || !Array.isArray(destinations)) {
+      console.error('Origins or destinations not arrays:', { origins, destinations })
+      throw new Error('Origins and destinations must be arrays')
+    }
+    
     if (origins.length === 0 || destinations.length === 0) {
-      throw new Error('Not enough input sources and destinations given')
+      console.error('Empty arrays provided:', { originsLength: origins.length, destinationsLength: destinations.length })
+      throw new Error('Origins and destinations arrays cannot be empty')
     }
 
     // Convert postcodes to coordinates using Mapbox Geocoding API
     const coordinatesCache = new Map<string, [number, number]>()
     
     const getCoordinates = async (postcode: string): Promise<[number, number]> => {
-      if (coordinatesCache.has(postcode)) {
-        return coordinatesCache.get(postcode)!
+      const cleanPostcode = postcode.trim().toUpperCase()
+      console.log(`Geocoding postcode: ${cleanPostcode}`)
+      
+      if (coordinatesCache.has(cleanPostcode)) {
+        const cached = coordinatesCache.get(cleanPostcode)!
+        console.log(`Using cached coordinates for ${cleanPostcode}:`, cached)
+        return cached
       }
       
-      const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(postcode)}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=GB&types=postcode`
+      const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cleanPostcode)}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=GB&types=postcode`
+      console.log(`Geocoding URL: ${geocodeUrl}`)
       
       const response = await fetch(geocodeUrl)
       const data = await response.json()
       
+      console.log(`Geocoding response for ${cleanPostcode}:`, { 
+        status: response.status, 
+        features: data.features?.length || 0,
+        firstFeature: data.features?.[0]
+      })
+      
+      if (!response.ok) {
+        throw new Error(`Geocoding API error for ${cleanPostcode}: ${response.status} ${response.statusText}`)
+      }
+      
       if (!data.features?.length) {
-        throw new Error(`Could not geocode postcode: ${postcode}`)
+        throw new Error(`Could not geocode postcode: ${cleanPostcode}`)
       }
       
       const [lng, lat] = data.features[0].center
       const coordinates: [number, number] = [lng, lat]
-      coordinatesCache.set(postcode, coordinates)
+      coordinatesCache.set(cleanPostcode, coordinates)
+      console.log(`Geocoded ${cleanPostcode} to coordinates:`, coordinates)
       
       return coordinates
     }
 
     // Get coordinates for all unique postcodes
     const allPostcodes = [...new Set([...origins, ...destinations])]
-    await Promise.all(allPostcodes.map(getCoordinates))
+    console.log(`Getting coordinates for postcodes:`, allPostcodes)
+    
+    // Geocode all postcodes
+    for (const postcode of allPostcodes) {
+      await getCoordinates(postcode)
+    }
 
     // Prepare coordinates for Matrix API
-    const originCoords = origins.map(postcode => coordinatesCache.get(postcode)!)
-    const destinationCoords = destinations.map(postcode => coordinatesCache.get(postcode)!)
+    const originCoords = origins.map(postcode => {
+      const cleanPostcode = postcode.trim().toUpperCase()
+      const coords = coordinatesCache.get(cleanPostcode)
+      if (!coords) throw new Error(`No coordinates found for origin: ${cleanPostcode}`)
+      return coords
+    })
+    
+    const destinationCoords = destinations.map(postcode => {
+      const cleanPostcode = postcode.trim().toUpperCase()
+      const coords = coordinatesCache.get(cleanPostcode)
+      if (!coords) throw new Error(`No coordinates found for destination: ${cleanPostcode}`)
+      return coords
+    })
+    
+    console.log('=== Matrix API Setup ===')
+    console.log('Origin coordinates:', originCoords)
+    console.log('Destination coordinates:', destinationCoords)
     
     // Format coordinates for Mapbox Matrix API
     const allCoords = [...originCoords, ...destinationCoords]
@@ -78,16 +129,27 @@ serve(async (req) => {
     // Call Mapbox Matrix API
     const matrixUrl = `https://api.mapbox.com/directions-matrix/v1/mapbox/driving/${coordinatesParam}?sources=${sources}&destinations=${destinationsParam}&access_token=${MAPBOX_ACCESS_TOKEN}`
     
-    console.log('Matrix API URL:', matrixUrl)
-    console.log('Coordinates:', { originCoords, destinationCoords, sources, destinationsParam })
+    console.log('=== Matrix API Call ===')
+    console.log('Matrix URL:', matrixUrl)
+    console.log('Coordinates param:', coordinatesParam)
+    console.log('Sources:', sources)
+    console.log('Destinations param:', destinationsParam)
     
     const matrixResponse = await fetch(matrixUrl)
     const matrixData = await matrixResponse.json()
     
-    console.log('Matrix API response:', { status: matrixResponse.status, data: matrixData })
+    console.log('=== Matrix API Response ===')
+    console.log('Status:', matrixResponse.status)
+    console.log('Response data:', JSON.stringify(matrixData, null, 2))
     
     if (!matrixResponse.ok) {
-      throw new Error(`Mapbox API error: ${matrixData.message || matrixData.error}`)
+      console.error('Matrix API error details:', matrixData)
+      throw new Error(`Mapbox Matrix API error: ${matrixResponse.status} - ${matrixData.message || matrixData.error || 'Unknown error'}`)
+    }
+    
+    if (!matrixData.distances || !matrixData.durations) {
+      console.error('Invalid Matrix API response structure:', matrixData)
+      throw new Error('Invalid response from Mapbox Matrix API: missing distances or durations')
     }
 
     // Convert distances from meters to miles and durations from seconds to minutes

@@ -4,8 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Order, Engineer, getSmartEngineerRecommendations } from '@/utils/schedulingUtils';
-import { MapPin, Clock, User, Star, Zap, CheckCircle, X } from 'lucide-react';
+import { Order, Engineer, getSmartEngineerRecommendations, clearDistanceCache } from '@/utils/schedulingUtils';
+import { MapPin, Clock, User, Star, Zap, CheckCircle, X, RefreshCw } from 'lucide-react';
 
 interface EngineerSuggestion {
   engineer: Engineer;
@@ -32,26 +32,36 @@ export function EngineerRecommendationPanel({
   const [suggestions, setSuggestions] = useState<EngineerSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
     if (!isVisible || !order) return;
-
-    const loadSmartRecommendations = async () => {
-      setLoading(true);
-      try {
-        const result = await getSmartEngineerRecommendations(order, engineers);
-        setSuggestions(result.recommendations);
-        setSettings(result.settings);
-      } catch (error) {
-        console.error('Error loading smart recommendations:', error);
-        setSuggestions([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadSmartRecommendations();
   }, [order, engineers, isVisible]);
+
+  const loadSmartRecommendations = async () => {
+    setLoading(true);
+    setDebugInfo(`Job: ${order.order_number} | Postcode: ${order.postcode || 'Not available'}`);
+    
+    try {
+      const result = await getSmartEngineerRecommendations(order, engineers);
+      setSuggestions(result.recommendations);
+      setSettings(result.settings);
+      
+      setDebugInfo(prev => prev + `\nFound ${result.recommendations.length} recommendations`);
+    } catch (error) {
+      console.error('Error loading smart recommendations:', error);
+      setSuggestions([]);
+      setDebugInfo(prev => prev + `\nError: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefreshWithClearCache = async () => {
+    clearDistanceCache();
+    await loadSmartRecommendations();
+  };
 
   if (!isVisible) return null;
 
@@ -77,14 +87,25 @@ export function EngineerRecommendationPanel({
             <User className="h-5 w-5" />
             Smart Recommendations
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => onSelectEngineer(null)}
-            className="h-6 w-6 p-0"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshWithClearCache}
+              disabled={loading}
+              className="h-7 px-2"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => onSelectEngineer(null)}
+              className="h-7 w-7 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           For {order.order_number} - {order.postcode}
@@ -94,6 +115,15 @@ export function EngineerRecommendationPanel({
             <p className="text-xs text-primary-foreground">
               ✨ Shows first available slots after {settings.hours_advance_notice}h notice within {settings.max_distance_miles} miles
             </p>
+          </div>
+        )}
+        
+        {debugInfo && (
+          <div className="bg-muted/50 rounded-md p-2 mt-2">
+            <div className="text-xs font-medium mb-1">Debug Info:</div>
+            {debugInfo.split('\n').map((line, i) => (
+              <div key={i} className="text-xs font-mono">{line}</div>
+            ))}
           </div>
         )}
       </CardHeader>

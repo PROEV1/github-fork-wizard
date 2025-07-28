@@ -53,17 +53,33 @@ export const getSchedulingSettings = async () => {
 };
 
 // Cache for distance calculations to avoid repeated API calls
-const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
+const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number; method: string }>();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// Clear cache function for debugging
+export const clearDistanceCache = () => {
+  distanceCache.clear();
+  console.log('Distance cache cleared');
+};
 
 // Enhanced distance calculation using Mapbox API - now uses actual order postcodes
 export const calculateDistance = async (postcode1?: string, postcode2?: string): Promise<number> => {
-  if (!postcode1 || !postcode2) return 10; // Default distance
+  if (!postcode1 || !postcode2) {
+    console.log('Missing postcode(s), returning default distance');
+    return 10; // Default distance
+  }
   
   const cleanPostcode1 = postcode1.trim().toUpperCase();
   const cleanPostcode2 = postcode2.trim().toUpperCase();
   
-  console.log(`Calculating distance between ${cleanPostcode1} and ${cleanPostcode2}`);
+  console.log(`=== Distance Calculation ===`);
+  console.log(`From: ${cleanPostcode1} | To: ${cleanPostcode2}`);
+  
+  // Check for exact match (same postcode should be very close)
+  if (cleanPostcode1 === cleanPostcode2) {
+    console.log('Same postcodes - returning 0.5 miles');
+    return 0.5;
+  }
   
   // Create cache key
   const cacheKey = `${cleanPostcode1}-${cleanPostcode2}`;
@@ -72,11 +88,12 @@ export const calculateDistance = async (postcode1?: string, postcode2?: string):
   // Check cache first
   const cached = distanceCache.get(cacheKey) || distanceCache.get(reverseKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    console.log(`Using cached distance: ${cached.distance} miles`);
+    console.log(`Using cached distance: ${cached.distance} miles (method: ${cached.method})`);
     return cached.distance;
   }
   
   try {
+    console.log('Calling Mapbox API...');
     const { data, error } = await supabase.functions.invoke('mapbox-distance', {
       body: {
         origins: [cleanPostcode1],
@@ -84,37 +101,74 @@ export const calculateDistance = async (postcode1?: string, postcode2?: string):
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Mapbox function error:', error);
+      throw error;
+    }
+    
+    if (!data || !data.distances || !data.distances[0] || data.distances[0][0] === undefined) {
+      console.error('Invalid Mapbox response structure:', data);
+      throw new Error('Invalid response from Mapbox API');
+    }
     
     const distance = data.distances[0][0];
-    const duration = data.durations[0][0];
+    const duration = data.durations?.[0]?.[0] || 30;
     
-    console.log(`Mapbox API returned: ${distance} miles, ${duration} minutes`);
+    console.log(`✅ Mapbox API success: ${distance} miles, ${duration} minutes`);
     
     // Cache the result
-    distanceCache.set(cacheKey, { distance, duration, timestamp: Date.now() });
+    distanceCache.set(cacheKey, { 
+      distance, 
+      duration, 
+      timestamp: Date.now(),
+      method: 'mapbox'
+    });
     
-    return distance || 10; // Fallback to 10 miles
+    return distance;
   } catch (error) {
-    console.error('Mapbox distance calculation failed, using fallback:', error);
+    console.error('❌ Mapbox distance calculation failed:', error);
     
     // Fallback to mock calculation
     const fallbackDistance = calculateDistanceFallback(cleanPostcode1, cleanPostcode2);
-    console.log(`Using fallback distance: ${fallbackDistance} miles`);
+    console.log(`🔄 Using fallback distance: ${fallbackDistance} miles`);
+    
+    // Cache the fallback result
+    distanceCache.set(cacheKey, { 
+      distance: fallbackDistance, 
+      duration: Math.round(fallbackDistance * 2.5), 
+      timestamp: Date.now(),
+      method: 'fallback'
+    });
+    
     return fallbackDistance;
   }
 };
 
 // Fallback distance calculation for when Mapbox API fails
 const calculateDistanceFallback = (postcode1: string, postcode2: string): number => {
-  // Extract postcode areas (first part before space or first 2-4 characters)
-  const area1 = postcode1.split(' ')[0] || postcode1.substring(0, postcode1.length >= 4 ? 4 : 3);
-  const area2 = postcode2.split(' ')[0] || postcode2.substring(0, postcode2.length >= 4 ? 4 : 3);
+  // Extract postcode areas more precisely
+  const extractArea = (postcode: string): string => {
+    // First try splitting by space and take first part
+    const parts = postcode.split(' ');
+    if (parts.length > 1) {
+      return parts[0];
+    }
+    
+    // If no space, extract area code (first 1-2 letters + optional digit(s))
+    const match = postcode.match(/^([A-Z]{1,2}\d{1,2})/);
+    return match ? match[1] : postcode.substring(0, 3);
+  };
   
-  console.log(`Fallback calculation: ${area1} to ${area2}`);
+  const area1 = extractArea(postcode1);
+  const area2 = extractArea(postcode2);
   
-  // Simple distance estimation based on postcode areas
-  if (area1 === area2) return 2; // Same area, very close
+  console.log(`🔄 Fallback calculation: ${postcode1} (${area1}) to ${postcode2} (${area2})`);
+  
+  // Exact same postcode areas should be very close
+  if (area1 === area2) {
+    console.log(`Same postcode areas (${area1}) - returning 2 miles`);
+    return 2;
+  }
   
   // Enhanced distance lookup table for UK postcode areas
   const distanceMap: Record<string, Record<string, number>> = {
