@@ -361,6 +361,13 @@ export function AdminScheduleCalendar() {
                   onJobDrop={handleJobDrop}
                   onShowRecommendations={(order) => {
                     setDraggedOrder(order);
+                    // Create a mock slot to trigger the recommendation panel
+                    setSelectedSlot({
+                      start: new Date(),
+                      end: new Date(Date.now() + 60 * 60 * 1000), // 1 hour later
+                      resourceId: null,
+                      action: 'select'
+                    });
                     setShowRecommendations(true);
                   }}
                   onStartDrag={(order) => {
@@ -440,8 +447,10 @@ export function AdminScheduleCalendar() {
                       order={draggedOrder}
                       engineers={engineers}
                       selectedDate={new Date(selectedSlot.start)}
-                      onSelectEngineer={async (engineerId) => {
-                        await handleJobDrop(draggedOrder.id, engineerId, selectedSlot);
+                         onSelectEngineer={async (engineerId) => {
+                        if (engineerId) {
+                          await handleJobDrop(draggedOrder.id, engineerId, selectedSlot);
+                        }
                         setShowRecommendations(false);
                         setDraggedOrder(null);
                         setSelectedSlot(null);

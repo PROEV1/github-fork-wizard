@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Order, Engineer, calculateDistance, calculateTravelTime } from '@/utils/schedulingUtils';
-import { MapPin, Clock, User, Star, Zap, CheckCircle } from 'lucide-react';
+import { MapPin, Clock, User, Star, Zap, CheckCircle, X } from 'lucide-react';
 
 interface EngineerSuggestion {
   engineer: Engineer;
@@ -21,7 +21,7 @@ interface EngineerRecommendationPanelProps {
   order: Order;
   engineers: Engineer[];
   selectedDate: Date;
-  onSelectEngineer: (engineerId: string) => void;
+  onSelectEngineer: (engineerId: string | null) => void;
   isVisible: boolean;
 }
 
@@ -135,11 +135,21 @@ export function EngineerRecommendationPanel({
   };
 
   return (
-    <Card className="w-80 shadow-lg border-2 border-primary/20">
+    <Card className="w-80 shadow-lg border-2 border-primary/20 bg-background">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <User className="h-5 w-5" />
-          Recommended Engineers
+        <CardTitle className="text-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Recommended Engineers
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => onSelectEngineer(null)}
+            className="h-6 w-6 p-0"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           For {order.order_number} on {selectedDate.toLocaleDateString()}
