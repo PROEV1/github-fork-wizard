@@ -58,8 +58,16 @@ export default function JobStatusUpdater({
 
       if (error) {
         console.error('Database update error:', error);
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
+
+      console.log('Engineer status updated successfully to:', newStatus);
 
       // Log the status change activity
       const { error: logError } = await supabase.rpc('log_order_activity', {
