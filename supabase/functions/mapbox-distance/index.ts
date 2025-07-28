@@ -19,9 +19,16 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== MAPBOX FUNCTION CALLED ===');
+    console.log('MAPBOX_ACCESS_TOKEN configured:', !!MAPBOX_ACCESS_TOKEN);
+    console.log('Token length:', MAPBOX_ACCESS_TOKEN?.length || 0);
+    
     if (!MAPBOX_ACCESS_TOKEN) {
       console.error('MAPBOX_ACCESS_TOKEN not configured')
-      throw new Error('MAPBOX_ACCESS_TOKEN not configured')
+      return new Response(
+        JSON.stringify({ error: 'MAPBOX_ACCESS_TOKEN not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     const body = await req.json()
@@ -170,9 +177,18 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    console.error('Error calculating distances:', error)
+    console.error('=== MAPBOX FUNCTION ERROR ===')
+    console.error('Error type:', error.constructor.name)
+    console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)))
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        type: error.constructor.name,
+        details: 'Check function logs for more details'
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

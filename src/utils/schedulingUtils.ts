@@ -370,10 +370,14 @@ export const getSmartEngineerRecommendations = async (
       const finalScore = Math.max(score, 10);
       console.log(`🎯 Final score for ${engineer.name}: ${finalScore.toFixed(1)}`);
       
+      // Calculate proper available date with advance notice
+      const advanceNoticeMs = settings.hours_advance_notice * 60 * 60 * 1000;
+      const earliestDate = new Date(Date.now() + advanceNoticeMs);
+      
       recommendations.push({
         engineer,
         isAvailable: true,
-        availableDate: new Date().toISOString(), // Today for now, needs proper availability check
+        availableDate: earliestDate.toISOString(),
         distance,
         travelTime,
         score: finalScore,
