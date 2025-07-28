@@ -38,6 +38,38 @@ export type Database = {
         }
         Relationships: []
       }
+      client_blocked_dates: {
+        Row: {
+          blocked_date: string
+          client_id: string
+          created_at: string | null
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_date: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_date?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_blocked_dates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -124,6 +156,47 @@ export type Database = {
           uploads_snapshot?: Json | null
         }
         Relationships: []
+      }
+      engineer_availability: {
+        Row: {
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          engineer_id: string
+          id: string
+          is_available: boolean | null
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          engineer_id: string
+          id?: string
+          is_available?: boolean | null
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          engineer_id?: string
+          id?: string
+          is_available?: boolean | null
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engineer_availability_engineer_id_fkey"
+            columns: ["engineer_id"]
+            isOneToOne: false
+            referencedRelation: "engineers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       engineer_uploads: {
         Row: {
@@ -472,6 +545,42 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          confirmation_immediate: boolean | null
+          created_at: string | null
+          email_enabled: boolean | null
+          id: string
+          phone_number: string | null
+          reminder_48h: boolean | null
+          sms_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          confirmation_immediate?: boolean | null
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          phone_number?: string | null
+          reminder_48h?: boolean | null
+          sms_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          confirmation_immediate?: boolean | null
+          created_at?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          phone_number?: string | null
+          reminder_48h?: boolean | null
+          sms_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_activity: {
         Row: {
           activity_type: string
@@ -619,14 +728,17 @@ export type Database = {
           manual_status_notes: string | null
           manual_status_override: boolean | null
           order_number: string
+          postcode: string | null
           quote_id: string
           scheduled_install_date: string | null
+          scheduling_conflicts: Json | null
           status: string
           status_enhanced:
             | Database["public"]["Enums"]["order_status_enhanced"]
             | null
           time_window: string | null
           total_amount: number
+          travel_time_minutes: number | null
           updated_at: string
         }
         Insert: {
@@ -651,14 +763,17 @@ export type Database = {
           manual_status_notes?: string | null
           manual_status_override?: boolean | null
           order_number: string
+          postcode?: string | null
           quote_id: string
           scheduled_install_date?: string | null
+          scheduling_conflicts?: Json | null
           status?: string
           status_enhanced?:
             | Database["public"]["Enums"]["order_status_enhanced"]
             | null
           time_window?: string | null
           total_amount?: number
+          travel_time_minutes?: number | null
           updated_at?: string
         }
         Update: {
@@ -683,14 +798,17 @@ export type Database = {
           manual_status_notes?: string | null
           manual_status_override?: boolean | null
           order_number?: string
+          postcode?: string | null
           quote_id?: string
           scheduled_install_date?: string | null
+          scheduling_conflicts?: Json | null
           status?: string
           status_enhanced?:
             | Database["public"]["Enums"]["order_status_enhanced"]
             | null
           time_window?: string | null
           total_amount?: number
+          travel_time_minutes?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1233,6 +1351,10 @@ export type Database = {
         Args: { order_row: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: Database["public"]["Enums"]["order_status_enhanced"]
       }
+      detect_scheduling_conflicts: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       get_engineer_assigned_client_ids: {
         Args: Record<PropertyKey, never>
         Returns: string[]
@@ -1240,6 +1362,10 @@ export type Database = {
       get_engineer_assigned_quote_ids: {
         Args: Record<PropertyKey, never>
         Returns: string[]
+      }
+      get_engineer_daily_workload: {
+        Args: { p_engineer_id: string; p_date: string }
+        Returns: number
       }
       get_user_assigned_jobs_count: {
         Args: { user_id: string }
