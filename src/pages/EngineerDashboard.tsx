@@ -334,12 +334,8 @@ export default function EngineerDashboard() {
 
 
   const getStatusBadge = (status: OrderStatusEnhanced, signedOff: string | null) => {
-    // If engineer has signed off, show completed status
-    if (signedOff) {
-      return <EnhancedJobStatusBadge status="completed" />;
-    }
-    
-    // Otherwise use the proper enhanced status
+    // Always show the actual enhanced status from the database
+    // The status calculation logic in the database handles engineer signoff properly
     return <EnhancedJobStatusBadge status={status} />;
   };
 
