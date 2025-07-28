@@ -127,16 +127,18 @@ export function UnifiedInstallationForm({
     try {
       const updateData: any = {};
       
-      // Check if engineer or date is being changed/cleared - reset engineer status
+      // Check if engineer or date is being changed/cleared - reset engineer sign-off
       const engineerChanging = (formData.engineer_id !== currentEngineerId) || 
-                               (formData.engineer_id === 'none') || 
-                               (!formData.engineer_id);
+                                (formData.engineer_id === 'none') || 
+                                (!formData.engineer_id);
       const dateChanging = (formData.scheduled_install_date !== (currentInstallDate ? currentInstallDate.split('T')[0] : '')) ||
                            (!formData.scheduled_install_date);
       
       if (engineerChanging || dateChanging) {
+        updateData.engineer_signed_off_at = null;
+        updateData.engineer_signature_data = null;
         updateData.engineer_status = null;
-        console.log('Resetting engineer status due to reschedule - engineer changed:', engineerChanging, 'date changed:', dateChanging);
+        console.log('Resetting engineer sign-off due to reschedule - engineer changed:', engineerChanging, 'date changed:', dateChanging);
       }
       
       // Only include fields that have values or explicitly set to null
@@ -164,13 +166,13 @@ export function UnifiedInstallationForm({
 
       if (error) throw error;
 
-      // Log engineer status reset if it happened
-      if (updateData.engineer_status === null) {
+      // Log engineer sign-off reset if it happened
+      if (updateData.engineer_signed_off_at === null) {
         try {
           await supabase.rpc('log_order_activity', {
             p_order_id: orderId,
             p_activity_type: 'engineer_status_reset',
-            p_description: 'Engineer status reset due to rescheduling',
+            p_description: 'Engineer sign-off reset due to rescheduling',
             p_details: {
               reason: engineerChanging ? 'engineer_changed' : 'date_changed',
               previous_engineer: currentEngineerId,
@@ -180,7 +182,7 @@ export function UnifiedInstallationForm({
             }
           });
         } catch (logError) {
-          console.error('Failed to log engineer status reset:', logError);
+          console.error('Failed to log engineer sign-off reset:', logError);
         }
       }
 
@@ -216,18 +218,20 @@ export function UnifiedInstallationForm({
           engineer_id: null,
           scheduled_install_date: null,
           time_window: null,
+          engineer_signed_off_at: null,
+          engineer_signature_data: null,
           engineer_status: null
         })
         .eq('id', orderId);
 
       if (error) throw error;
 
-      // Log engineer status reset
+      // Log engineer sign-off reset
       try {
         await supabase.rpc('log_order_activity', {
           p_order_id: orderId,
           p_activity_type: 'engineer_status_reset',
-          p_description: 'Engineer status reset - schedule cleared',
+          p_description: 'Engineer sign-off reset - schedule cleared',
           p_details: {
             reason: 'schedule_cleared',
             previous_engineer: currentEngineerId,
@@ -235,7 +239,7 @@ export function UnifiedInstallationForm({
           }
         });
       } catch (logError) {
-        console.error('Failed to log engineer status reset:', logError);
+        console.error('Failed to log engineer sign-off reset:', logError);
       }
 
       // Update local form state

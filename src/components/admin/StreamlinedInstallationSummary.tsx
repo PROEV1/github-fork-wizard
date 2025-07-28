@@ -136,9 +136,17 @@ export function StreamlinedInstallationSummary({
       switch (field) {
         case 'engineer':
           updates.engineer_id = editValues.engineerId === 'none' ? null : editValues.engineerId || null;
+          // Reset engineer sign-off when engineer changes
+          updates.engineer_signed_off_at = null;
+          updates.engineer_signature_data = null;
+          updates.engineer_status = null;
           break;
         case 'date':
           updates.scheduled_install_date = editValues.installDate ? new Date(editValues.installDate).toISOString() : null;
+          // Reset engineer sign-off when date changes
+          updates.engineer_signed_off_at = null;
+          updates.engineer_signature_data = null;
+          updates.engineer_status = null;
           break;
         case 'timeWindow':
           updates.time_window = editValues.timeWindow === 'none' ? null : editValues.timeWindow || null;
@@ -232,6 +240,16 @@ export function StreamlinedInstallationSummary({
     try {
       const updateData: any = {};
       
+      // Check if engineer or date is changing - reset engineer sign-off if so
+      const engineerChanging = editData.engineer_id !== currentEngineerId;
+      const dateChanging = editData.scheduled_install_date !== (currentInstallDate ? currentInstallDate.split('T')[0] : '');
+      
+      if (engineerChanging || dateChanging) {
+        updateData.engineer_signed_off_at = null;
+        updateData.engineer_signature_data = null;
+        updateData.engineer_status = null;
+      }
+      
       if (editData.engineer_id) updateData.engineer_id = editData.engineer_id;
       if (editData.scheduled_install_date) updateData.scheduled_install_date = new Date(editData.scheduled_install_date).toISOString();
       if (editData.time_window) updateData.time_window = editData.time_window;
@@ -245,6 +263,26 @@ export function StreamlinedInstallationSummary({
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Log activity if engineer sign-off was reset
+      if (updateData.engineer_signed_off_at === null) {
+        try {
+          await supabase.rpc('log_order_activity', {
+            p_order_id: orderId,
+            p_activity_type: 'engineer_status_reset',
+            p_description: 'Engineer status reset due to rescheduling',
+            p_details: {
+              reason: engineerChanging ? 'engineer_changed' : 'date_changed',
+              previous_engineer: currentEngineerId,
+              new_engineer: editData.engineer_id,
+              previous_date: currentInstallDate,
+              new_date: editData.scheduled_install_date
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log engineer status reset:', logError);
+        }
+      }
 
       toast({
         title: "Installation Updated",

@@ -92,6 +92,16 @@ export function EnhancedInstallManagement({
         internal_install_notes: notes || null,
       };
 
+      // Check if engineer or date is changing - reset engineer sign-off if so
+      const engineerChanging = selectedEngineerId !== (currentEngineerId || 'unassigned');
+      const dateChanging = installDate !== (currentInstallDate ? new Date(currentInstallDate).toISOString().split('T')[0] : '');
+      
+      if (engineerChanging || dateChanging) {
+        updates.engineer_signed_off_at = null;
+        updates.engineer_signature_data = null;
+        updates.engineer_status = null;
+      }
+
       if (selectedEngineerId && selectedEngineerId !== 'unassigned') {
         updates.engineer_id = selectedEngineerId;
       } else if (selectedEngineerId === 'unassigned') {
@@ -110,6 +120,26 @@ export function EnhancedInstallManagement({
         .eq('id', orderId);
 
       if (error) throw error;
+
+      // Log activity if engineer sign-off was reset
+      if (updates.engineer_signed_off_at === null) {
+        try {
+          await supabase.rpc('log_order_activity', {
+            p_order_id: orderId,
+            p_activity_type: 'engineer_status_reset',
+            p_description: 'Engineer status reset due to rescheduling',
+            p_details: {
+              reason: engineerChanging ? 'engineer_changed' : 'date_changed',
+              previous_engineer: currentEngineerId,
+              new_engineer: selectedEngineerId === 'unassigned' ? null : selectedEngineerId,
+              previous_date: currentInstallDate,
+              new_date: installDate
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log engineer status reset:', logError);
+        }
+      }
 
       toast({
         title: "Installation Details Updated",
