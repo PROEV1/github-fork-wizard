@@ -92,7 +92,10 @@ export function SchedulingSettingsPanel() {
         .from('admin_settings')
         .upsert({
           setting_key: 'scheduling_rules',
-          setting_value: schedulingRules
+          setting_value: schedulingRules,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
         });
 
       if (schedulingError) throw schedulingError;
@@ -101,7 +104,10 @@ export function SchedulingSettingsPanel() {
         .from('admin_settings')
         .upsert({
           setting_key: 'booking_rules',
-          setting_value: bookingRules
+          setting_value: bookingRules,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
         });
 
       if (bookingError) throw bookingError;
