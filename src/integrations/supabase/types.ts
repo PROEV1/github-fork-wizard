@@ -821,6 +821,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          min_width: number | null
           name: string
           specifications: Json | null
           updated_at: string
@@ -832,6 +833,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          min_width?: number | null
           name: string
           specifications?: Json | null
           updated_at?: string
@@ -843,6 +845,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          min_width?: number | null
           name?: string
           specifications?: Json | null
           updated_at?: string

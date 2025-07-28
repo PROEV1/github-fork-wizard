@@ -20,6 +20,7 @@ interface Product {
   category: string | null;
   is_active: boolean;
   specifications?: any;
+  min_width?: number | null;
 }
 
 interface CoreProduct {
@@ -53,7 +54,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
     base_price: product?.base_price || 0,
     category: product?.category || '',
     is_active: product?.is_active ?? true,
-    specifications: product?.specifications || {}
+    specifications: product?.specifications || {},
+    min_width: product?.min_width || ''
   });
 
   useEffect(() => {
@@ -203,7 +205,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
         base_price: formData.base_price,
         category: formData.category || null,
         is_active: formData.is_active,
-        specifications: formData.specifications
+        specifications: formData.specifications,
+        min_width: formData.category === 'Core' && formData.min_width ? parseFloat(formData.min_width.toString()) : null
       };
 
       let productId: string;
@@ -335,6 +338,22 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
             </Select>
           </div>
         </div>
+
+        {/* Min Width field (only for Core products) */}
+        {formData.category === 'Core' && (
+          <div className="space-y-2">
+            <Label htmlFor="min_width">Minimum Width (cm)</Label>
+            <Input
+              id="min_width"
+              type="number"
+              min="0"
+              step="0.1"
+              value={formData.min_width}
+              onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
+              placeholder="Enter minimum width in centimeters"
+            />
+          </div>
+        )}
 
         {/* Image Upload Section */}
         <div className="space-y-2">
