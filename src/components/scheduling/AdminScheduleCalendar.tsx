@@ -162,27 +162,32 @@ export function AdminScheduleCalendar() {
 
   // Handle drops from external sources (sidebar)
   const handleDropFromOutside = useCallback(({ draggedEvent, start, end }: any) => {
-    console.log('Drop from outside:', draggedEvent, start, end);
+    console.log('Drop from outside triggered:', { draggedEvent, start, end, draggedJob });
     
-    if (!draggedEvent || !start) {
-      console.error('Invalid drop data');
+    if (!start) {
+      console.error('Invalid drop data - no start time');
+      return;
+    }
+
+    // Use the current draggedJob from state (set by sidebar drag start)
+    if (!draggedJob) {
+      console.error('No dragged job available');
+      toast.error('No job selected for assignment');
       return;
     }
 
     // Set slot info for recommendations
     const slot = {
-      start,
-      end: end || start,
-      resourceId: null
+      start: new Date(start),
+      end: new Date(end || start),
+      resourceId: null,
+      action: 'drop' as const
     };
     
+    console.log('Setting slot and showing recommendations:', slot);
     setSelectedSlot(slot);
-    
-    // If we have a dragged job from sidebar, show recommendations
-    if (draggedJob) {
-      setDraggedOrder(draggedJob);
-      setShowRecommendations(true);
-    }
+    setDraggedOrder(draggedJob);
+    setShowRecommendations(true);
   }, [draggedJob]);
 
   // Handle job reassignment
@@ -419,12 +424,12 @@ export function AdminScheduleCalendar() {
                          onNavigate={setDate}
                          onSelectEvent={handleSelectEvent}
                          onSelectSlot={handleSelectSlot}
-                         onDropFromOutside={handleDropFromOutside}
-                         dragFromOutsideItem={draggedJob ? {
-                           orderId: draggedJob.id,
-                           title: `Order #${draggedJob.order_number}`
-                         } : null}
-                         selectable
+                          onDropFromOutside={handleDropFromOutside}
+                          dragFromOutsideItem={() => draggedJob ? {
+                            id: draggedJob.id,
+                            title: `${draggedJob.order_number} - ${draggedJob.client?.full_name}`,
+                          } : null}
+                          selectable
                          popup
                          drilldownView={null}
                          components={{
