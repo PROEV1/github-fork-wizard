@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
-import { Order, Engineer, calculateDistance, calculateTravelTime, getEngineerWorkload, extractPostcode } from '@/utils/schedulingUtils';
+import { Order, Engineer, getSmartEngineerRecommendations } from '@/utils/schedulingUtils';
 import { MapPin, Clock, User, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,11 +23,11 @@ interface SmartAssignmentModalProps {
 
 interface EngineerSuggestion {
   engineer: Engineer;
+  availableDate: string;
   distance: number;
   travelTime: number;
-  workload: number;
-  available: boolean;
   score: number;
+  reasons: string[];
 }
 
 export function SmartAssignmentModal({ 
@@ -46,60 +46,30 @@ export function SmartAssignmentModal({
   const [suggestions, setSuggestions] = useState<EngineerSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Calculate smart suggestions
+  // Load smart suggestions when modal opens
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!isOpen) return;
 
-    const calculateSuggestions = async () => {
+    const loadSuggestions = async () => {
       setLoading(true);
-      const suggestions: EngineerSuggestion[] = [];
-
-      for (const engineer of engineers) {
-        try {
-          // Extract postcodes from addresses
-          const jobPostcode = extractPostcode(order.job_address) || order.postcode;
-          const engineerPostcode = engineer.starting_postcode;
-          
-          const distance = await calculateDistance(engineerPostcode, jobPostcode);
-          const travelTime = calculateTravelTime(distance);
-          const workload = await getEngineerWorkload(engineer.id, selectedDate.toISOString().split('T')[0]);
-          
-          // Simple scoring algorithm
-          let score = 100;
-          score -= distance * 0.5; // Penalty for distance
-          score -= workload * 10; // Penalty for existing workload
-          score += engineer.availability ? 20 : -50; // Bonus for availability
-
-          suggestions.push({
-            engineer,
-            distance,
-            travelTime,
-            workload,
-            available: engineer.availability && workload < 3, // Max 3 jobs per day
-            score: Math.max(0, score)
-          });
-        } catch (error) {
-          console.error(`Error calculating suggestion for engineer ${engineer.id}:`, error);
-          // Add fallback suggestion with default values
-          suggestions.push({
-            engineer,
-            distance: 10,
-            travelTime: 20,
-            workload: 0,
-            available: engineer.availability || false,
-            score: 50
-          });
+      try {
+        const result = await getSmartEngineerRecommendations(order, engineers);
+        setSuggestions(result.recommendations);
+        
+        // Auto-select the first available date if no date is selected
+        if (!selectedDate && result.recommendations.length > 0) {
+          setSelectedDate(new Date(result.recommendations[0].availableDate));
         }
+      } catch (error) {
+        console.error('Error loading suggestions:', error);
+        setSuggestions([]);
+      } finally {
+        setLoading(false);
       }
-
-      // Sort by score (highest first)
-      suggestions.sort((a, b) => b.score - a.score);
-      setSuggestions(suggestions);
-      setLoading(false);
     };
 
-    calculateSuggestions();
-  }, [selectedDate, engineers, order.postcode, order.job_address]);
+    loadSuggestions();
+  }, [isOpen, order, engineers]);
 
   const handleAssign = async () => {
     if (!selectedEngineerId || !selectedDate) {
@@ -196,14 +166,16 @@ export function SmartAssignmentModal({
                 ) : (
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {suggestions.map((suggestion) => (
-                      <Card
+                        <Card
                         key={suggestion.engineer.id}
                         className={`
                           cursor-pointer transition-all duration-200 hover:shadow-md
                           ${selectedEngineerId === suggestion.engineer.id ? 'ring-2 ring-primary' : ''}
-                          ${!suggestion.available ? 'opacity-60' : ''}
                         `}
-                        onClick={() => setSelectedEngineerId(suggestion.engineer.id)}
+                        onClick={() => {
+                          setSelectedEngineerId(suggestion.engineer.id);
+                          setSelectedDate(new Date(suggestion.availableDate));
+                        }}
                       >
                         <CardContent className="p-3">
                           <div className="space-y-2">
@@ -212,17 +184,16 @@ export function SmartAssignmentModal({
                                 <h4 className="font-medium text-sm flex items-center gap-2">
                                   <User className="h-4 w-4" />
                                   {suggestion.engineer.name}
-                                  {suggestion.available ? (
-                                    <CheckCircle className="h-4 w-4 text-success" />
-                                  ) : (
-                                    <AlertTriangle className="h-4 w-4 text-warning" />
-                                  )}
+                                  <CheckCircle className="h-4 w-4 text-success" />
                                 </h4>
                                 <p className="text-xs text-muted-foreground">
                                   {suggestion.engineer.region}
                                 </p>
+                                <p className="text-xs text-primary font-medium">
+                                  Available: {new Date(suggestion.availableDate).toLocaleDateString()}
+                                </p>
                               </div>
-                              <Badge variant={suggestion.available ? 'default' : 'secondary'}>
+                              <Badge variant="default">
                                 Score: {Math.round(suggestion.score)}
                               </Badge>
                             </div>
@@ -230,22 +201,19 @@ export function SmartAssignmentModal({
                             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
-                                <span>{suggestion.distance}mi away</span>
+                                <span>{suggestion.distance.toFixed(1)}mi away</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
                                 <span>{suggestion.travelTime}min travel</span>
                               </div>
-                              <div className="col-span-2">
-                                <span>Current workload: {suggestion.workload} jobs</span>
-                              </div>
                             </div>
 
-                            {!suggestion.available && (
-                              <div className="text-xs text-warning">
-                                ⚠️ Engineer may be overbooked or unavailable
-                              </div>
-                            )}
+                            <div className="text-xs text-muted-foreground">
+                              {suggestion.reasons.slice(0, 2).map((reason, idx) => (
+                                <div key={idx}>• {reason}</div>
+                              ))}
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

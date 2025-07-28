@@ -25,22 +25,38 @@ export interface SchedulingConflict {
   message: string;
 }
 
-// Extract postcode from UK address
-export const extractPostcode = (address?: string): string | null => {
-  if (!address) return null;
+// Get scheduling settings from admin configuration
+export const getSchedulingSettings = async () => {
+  const { data, error } = await supabase
+    .rpc('get_scheduling_settings');
   
-  // UK postcode regex - matches formats like M1 1AA, B33 8TH, etc.
-  const postcodeRegex = /([A-Z]{1,2}[0-9][A-Z0-9]?\s?[0-9][A-Z]{2})/gi;
-  const match = address.match(postcodeRegex);
+  if (error) {
+    console.error('Error fetching scheduling settings:', error);
+    return {
+      hours_advance_notice: 48,
+      max_distance_miles: 90,
+      max_jobs_per_day: 3,
+      allow_weekend_bookings: false,
+      working_hours_start: '08:00',
+      working_hours_end: '18:00'
+    };
+  }
   
-  return match ? match[0].trim().toUpperCase() : null;
+  return data[0] || {
+    hours_advance_notice: 48,
+    max_distance_miles: 90,
+    max_jobs_per_day: 3,
+    allow_weekend_bookings: false,
+    working_hours_start: '08:00',
+    working_hours_end: '18:00'
+  };
 };
 
 // Cache for distance calculations to avoid repeated API calls
 const distanceCache = new Map<string, { distance: number; duration: number; timestamp: number }>();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
-// Enhanced distance calculation using Mapbox API
+// Enhanced distance calculation using Mapbox API - now uses actual order postcodes
 export const calculateDistance = async (postcode1?: string, postcode2?: string): Promise<number> => {
   if (!postcode1 || !postcode2) return 10; // Default distance
   
@@ -274,6 +290,159 @@ export const formatOrderForCalendar = (order: Order) => {
       conflicts
     }
   };
+};
+
+// Find the first available slot for engineers within distance limits
+export const findFirstAvailableSlot = async (
+  engineerIds: string[],
+  clientPostcode: string,
+  estimatedHours: number = 2,
+  clientId?: string
+) => {
+  const { data, error } = await supabase
+    .rpc('find_first_available_slot', {
+      p_engineer_ids: engineerIds,
+      p_client_postcode: clientPostcode,
+      p_estimated_hours: estimatedHours,
+      p_client_id: clientId || null
+    });
+  
+  if (error) {
+    console.error('Error finding available slot:', error);
+    throw error;
+  }
+  
+  return data || [];
+};
+
+// Smart engineer recommendation with auto-date finding
+export const getSmartEngineerRecommendations = async (
+  order: Order,
+  engineers: Engineer[]
+): Promise<{
+  recommendations: Array<{
+    engineer: Engineer;
+    availableDate: string;
+    distance: number;
+    travelTime: number;
+    score: number;
+    reasons: string[];
+  }>;
+  settings: any;
+}> => {
+  try {
+    const settings = await getSchedulingSettings();
+    const clientPostcode = order.postcode; // Use actual stored postcode
+    
+    if (!clientPostcode) {
+      throw new Error('No postcode found for order');
+    }
+    
+    // Find available slots for all engineers
+    const engineerIds = engineers.map(e => e.id);
+    const availableSlots = await findFirstAvailableSlot(
+      engineerIds,
+      clientPostcode,
+      order.estimated_duration_hours || 2,
+      order.client_id
+    );
+    
+    // Calculate recommendations with real distance data
+    const recommendations = await Promise.all(
+      availableSlots.map(async (slot) => {
+        const engineer = engineers.find(e => e.id === slot.engineer_id);
+        if (!engineer) return null;
+        
+        // Calculate real distance if we have engineer postcode
+        let distance = parseFloat(slot.distance_miles.toString());
+        let travelTime = slot.travel_time_minutes;
+        
+        if (engineer.starting_postcode) {
+          try {
+            distance = await calculateDistance(engineer.starting_postcode, clientPostcode);
+            travelTime = calculateTravelTime(distance);
+          } catch (error) {
+            console.error('Distance calculation failed, using fallback:', error);
+          }
+        }
+        
+        // Filter by maximum distance
+        if (distance > settings.max_distance_miles) {
+          return null;
+        }
+        
+        // Calculate score and reasons
+        let score = parseFloat(slot.recommendation_score.toString());
+        const reasons: string[] = [];
+        
+        if (distance <= 5) {
+          score += 20;
+          reasons.push('Very close to job location');
+        } else if (distance <= 15) {
+          score += 10;
+          reasons.push('Reasonable distance');
+        } else if (distance <= settings.max_distance_miles) {
+          reasons.push('Within service area');
+        }
+        
+        if (engineer.region) {
+          const orderPostcodeArea = clientPostcode.split(' ')[0];
+          if (engineer.region.toLowerCase().includes(orderPostcodeArea.toLowerCase())) {
+            score += 15;
+            reasons.push('Same region coverage');
+          }
+        }
+        
+        const nextAvailable = new Date(slot.available_date);
+        const hoursUntilAvailable = (nextAvailable.getTime() - Date.now()) / (1000 * 60 * 60);
+        
+        if (hoursUntilAvailable <= settings.hours_advance_notice * 1.5) {
+          score += 10;
+          reasons.push('Available soon');
+        }
+        
+        return {
+          engineer,
+          availableDate: slot.available_date,
+          distance,
+          travelTime,
+          score,
+          reasons
+        };
+      })
+    );
+    
+    // Filter out null results and sort by score
+    const validRecommendations = recommendations
+      .filter(r => r !== null)
+      .sort((a, b) => b.score - a.score);
+    
+    return {
+      recommendations: validRecommendations,
+      settings
+    };
+  } catch (error) {
+    console.error('Error getting smart recommendations:', error);
+    
+    // Fallback to basic recommendations
+    const settings = await getSchedulingSettings();
+    const minimumDate = new Date();
+    minimumDate.setHours(minimumDate.getHours() + settings.hours_advance_notice);
+    
+    const basicRecommendations = engineers.map(engineer => ({
+      engineer,
+      availableDate: minimumDate.toISOString().split('T')[0],
+      distance: 15,
+      travelTime: 30,
+      score: 75,
+      reasons: ['Fallback recommendation - please verify availability']
+    }));
+    
+    return {
+      recommendations: basicRecommendations.sort((a, b) => b.score - a.score),
+      settings
+    };
+  }
 };
 
 // Update order assignment

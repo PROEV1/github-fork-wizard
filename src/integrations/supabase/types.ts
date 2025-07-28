@@ -1447,6 +1447,21 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: Json
       }
+      find_first_available_slot: {
+        Args: {
+          p_engineer_ids: string[]
+          p_client_postcode: string
+          p_estimated_hours?: number
+          p_client_id?: string
+        }
+        Returns: {
+          engineer_id: string
+          available_date: string
+          distance_miles: number
+          travel_time_minutes: number
+          recommendation_score: number
+        }[]
+      }
       get_engineer_assigned_client_ids: {
         Args: Record<PropertyKey, never>
         Returns: string[]
@@ -1458,6 +1473,17 @@ export type Database = {
       get_engineer_daily_workload: {
         Args: { p_engineer_id: string; p_date: string }
         Returns: number
+      }
+      get_scheduling_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          hours_advance_notice: number
+          max_distance_miles: number
+          max_jobs_per_day: number
+          allow_weekend_bookings: boolean
+          working_hours_start: string
+          working_hours_end: string
+        }[]
       }
       get_user_assigned_jobs_count: {
         Args: { user_id: string }

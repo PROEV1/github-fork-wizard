@@ -4,15 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Order, Engineer, calculateDistance, calculateTravelTime, extractPostcode } from '@/utils/schedulingUtils';
+import { Order, Engineer, getSmartEngineerRecommendations } from '@/utils/schedulingUtils';
 import { MapPin, Clock, User, Star, Zap, CheckCircle, X } from 'lucide-react';
 
 interface EngineerSuggestion {
   engineer: Engineer;
+  availableDate: string;
   distance: number;
   travelTime: number;
-  workload: number;
-  isAvailable: boolean;
   score: number;
   reasons: string[];
 }
@@ -20,112 +19,39 @@ interface EngineerSuggestion {
 interface EngineerRecommendationPanelProps {
   order: Order;
   engineers: Engineer[];
-  selectedDate: Date;
-  onSelectEngineer: (engineerId: string | null) => void;
+  onSelectEngineer: (engineerId: string | null, availableDate?: string) => void;
   isVisible: boolean;
 }
 
 export function EngineerRecommendationPanel({
   order,
   engineers,
-  selectedDate,
   onSelectEngineer,
   isVisible
 }: EngineerRecommendationPanelProps) {
   const [suggestions, setSuggestions] = useState<EngineerSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Check if selected date is at least 48 hours from now
-  const minimumDate = new Date();
-  minimumDate.setHours(minimumDate.getHours() + 48);
-  const isWithin48Hours = selectedDate < minimumDate;
+  const [settings, setSettings] = useState<any>(null);
 
   useEffect(() => {
-    if (!isVisible || !order || !selectedDate || isWithin48Hours) return;
+    if (!isVisible || !order) return;
 
-    const calculateSuggestions = async () => {
+    const loadSmartRecommendations = async () => {
       setLoading(true);
       try {
-        const suggestionPromises = engineers.map(async (engineer) => {
-          // Extract postcodes from addresses
-          const jobPostcode = extractPostcode(order.job_address) || order.postcode;
-          const engineerPostcode = engineer.starting_postcode;
-          
-          const distance = await calculateDistance(engineerPostcode, jobPostcode);
-          const travelTime = calculateTravelTime(distance);
-          
-          // TODO: Implement actual workload calculation
-          const workload = Math.floor(Math.random() * 3); // Mock workload
-          const isAvailable = true; // TODO: Check actual availability
-          
-          const reasons: string[] = [];
-          let score = 100;
-
-          // Score based on distance (closer is better)
-          if (distance <= 5) {
-            score += 20;
-            reasons.push('Very close to job location');
-          } else if (distance <= 15) {
-            score += 10;
-            reasons.push('Reasonable distance');
-          } else {
-            score -= 10;
-            reasons.push('Further distance');
-          }
-
-          // Score based on region match
-          if (engineer.region && jobPostcode) {
-            const orderPostcodeArea = jobPostcode.split(' ')[0];
-            if (engineer.region.toLowerCase().includes(orderPostcodeArea.toLowerCase())) {
-              score += 15;
-              reasons.push('Same region coverage');
-            }
-          }
-
-          // Score based on workload (less busy is better)
-          if (workload === 0) {
-            score += 15;
-            reasons.push('Free schedule');
-          } else if (workload === 1) {
-            score += 5;
-            reasons.push('Light schedule');
-          } else {
-            score -= 5;
-            reasons.push('Busy schedule');
-          }
-
-          // Availability check
-          if (!isAvailable) {
-            score -= 50;
-            reasons.push('Not available');
-          }
-
-          return {
-            engineer,
-            distance,
-            travelTime,
-            workload,
-            isAvailable,
-            score,
-            reasons
-          };
-        });
-
-        const suggestions = await Promise.all(suggestionPromises);
-        
-        // Sort by score (highest first)
-        suggestions.sort((a, b) => b.score - a.score);
-        
-        setSuggestions(suggestions);
+        const result = await getSmartEngineerRecommendations(order, engineers);
+        setSuggestions(result.recommendations);
+        setSettings(result.settings);
       } catch (error) {
-        console.error('Error calculating suggestions:', error);
+        console.error('Error loading smart recommendations:', error);
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }
     };
 
-    calculateSuggestions();
-  }, [order, engineers, selectedDate, isVisible, isWithin48Hours]);
+    loadSmartRecommendations();
+  }, [order, engineers, isVisible]);
 
   if (!isVisible) return null;
 
@@ -149,7 +75,7 @@ export function EngineerRecommendationPanel({
         <CardTitle className="text-lg flex items-center justify-between">
           <div className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            Recommended Engineers
+            Smart Recommendations
           </div>
           <Button 
             variant="ghost" 
@@ -161,12 +87,12 @@ export function EngineerRecommendationPanel({
           </Button>
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          For {order.order_number} on {selectedDate.toLocaleDateString()}
+          For {order.order_number} - {order.postcode}
         </p>
-        {isWithin48Hours && (
-          <div className="bg-warning/10 border border-warning/20 rounded-md p-2 mt-2">
-            <p className="text-xs text-warning-foreground">
-              ⚠️ Bookings require 48 hours notice. Please select a date after {minimumDate.toLocaleDateString()}.
+        {settings && (
+          <div className="bg-primary/10 border border-primary/20 rounded-md p-2 mt-2">
+            <p className="text-xs text-primary-foreground">
+              ✨ Shows first available slots after {settings.hours_advance_notice}h notice within {settings.max_distance_miles} miles
             </p>
           </div>
         )}
@@ -177,15 +103,11 @@ export function EngineerRecommendationPanel({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             <p className="text-sm text-muted-foreground mt-2">Calculating distances...</p>
           </div>
-        ) : isWithin48Hours ? (
-          <div className="text-center py-4 text-muted-foreground">
-            <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Please select a date at least 48 hours in advance</p>
-          </div>
-        ) : suggestions.length === 0 ? (
+        ) : suggestions.length === 0 && !loading ? (
           <div className="text-center py-4 text-muted-foreground">
             <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No engineers available</p>
+            <p className="text-sm">No engineers available within distance limits</p>
+            <p className="text-xs mt-1">Try adjusting the max distance in admin settings</p>
           </div>
         ) : (
           suggestions.map((suggestion, index) => (
@@ -195,9 +117,8 @@ export function EngineerRecommendationPanel({
                   p-3 rounded-lg border cursor-pointer transition-all duration-200
                   hover:border-primary hover:shadow-md
                   ${index === 0 ? 'border-primary/50 bg-primary/5' : 'border-border'}
-                  ${!suggestion.isAvailable ? 'opacity-60' : ''}
                 `}
-                onClick={() => onSelectEngineer(suggestion.engineer.id)}
+                onClick={() => onSelectEngineer(suggestion.engineer.id, suggestion.availableDate)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -209,6 +130,9 @@ export function EngineerRecommendationPanel({
                     <div>
                       <p className="font-medium text-sm">{suggestion.engineer.name}</p>
                       <p className="text-xs text-muted-foreground">{suggestion.engineer.region}</p>
+                      <p className="text-xs text-primary font-medium">
+                        Available: {new Date(suggestion.availableDate).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -231,26 +155,14 @@ export function EngineerRecommendationPanel({
                 </div>
 
                 <div className="flex flex-wrap gap-1 mb-2">
-                  {suggestion.workload === 0 && (
-                    <Badge variant="outline" className="text-xs text-green-600 border-green-200">
-                      Free
-                    </Badge>
-                  )}
-                  {suggestion.workload === 1 && (
-                    <Badge variant="outline" className="text-xs text-blue-600 border-blue-200">
-                      Light
-                    </Badge>
-                  )}
-                  {suggestion.workload >= 2 && (
-                    <Badge variant="outline" className="text-xs text-orange-600 border-orange-200">
-                      Busy
-                    </Badge>
-                  )}
                   {index === 0 && (
                     <Badge className="text-xs bg-primary/10 text-primary border-primary">
                       Best Match
                     </Badge>
                   )}
+                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                    Next Available
+                  </Badge>
                 </div>
 
                 <div className="space-y-1">
@@ -265,10 +177,9 @@ export function EngineerRecommendationPanel({
                   size="sm" 
                   className="w-full mt-2" 
                   variant={index === 0 ? "default" : "outline"}
-                  disabled={!suggestion.isAvailable || isWithin48Hours}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelectEngineer(suggestion.engineer.id);
+                    onSelectEngineer(suggestion.engineer.id, suggestion.availableDate);
                   }}
                 >
                   {index === 0 ? 'Assign (Recommended)' : 'Assign Engineer'}

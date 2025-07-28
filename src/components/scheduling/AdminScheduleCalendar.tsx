@@ -451,10 +451,15 @@ export function AdminScheduleCalendar() {
                     <EngineerRecommendationPanel
                       order={draggedOrder}
                       engineers={engineers}
-                      selectedDate={new Date(selectedSlot.start)}
-                         onSelectEngineer={async (engineerId) => {
-                        if (engineerId) {
-                          await handleJobDrop(draggedOrder.id, engineerId, selectedSlot);
+                      onSelectEngineer={async (engineerId, availableDate) => {
+                        if (engineerId && availableDate) {
+                          // Update the slot with the recommended date
+                          const updatedSlot = {
+                            ...selectedSlot,
+                            start: new Date(availableDate),
+                            end: new Date(availableDate)
+                          };
+                          await handleJobDrop(draggedOrder.id, engineerId, updatedSlot);
                         }
                         setShowRecommendations(false);
                         setDraggedOrder(null);

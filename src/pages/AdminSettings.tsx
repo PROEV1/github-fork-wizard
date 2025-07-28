@@ -11,7 +11,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Save, Settings, CreditCard, Mail, MessageSquare, Bell, AlertTriangle } from 'lucide-react';
+import { Save, Settings, CreditCard, Mail, MessageSquare, Bell, AlertTriangle, Calendar } from 'lucide-react';
+import { SchedulingSettingsPanel } from '@/components/admin/SchedulingSettingsPanel';
 
 interface AdminSettings {
   payment_config: PaymentConfig;
@@ -307,8 +308,12 @@ export default function AdminSettings() {
             </div>
           )}
 
-          <Tabs defaultValue="payments" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+          <Tabs defaultValue="scheduling" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-6">
+              <TabsTrigger value="scheduling" className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span>Scheduling</span>
+              </TabsTrigger>
               <TabsTrigger value="payments" className="flex items-center space-x-2">
                 <CreditCard className="h-4 w-4" />
                 <span>Payments</span>
@@ -330,6 +335,11 @@ export default function AdminSettings() {
                 <span>System</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Scheduling Configuration */}
+            <TabsContent value="scheduling" className="space-y-6">
+              <SchedulingSettingsPanel />
+            </TabsContent>
 
             {/* Payment & Stripe Configuration */}
             <TabsContent value="payments" className="space-y-6">
