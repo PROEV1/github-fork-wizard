@@ -1223,6 +1223,7 @@ export type Database = {
         | "install_completed_pending_qa"
         | "completed"
         | "revisit_required"
+        | "awaiting_final_payment"
       user_role:
         | "admin"
         | "client"
@@ -1369,6 +1370,7 @@ export const Constants = {
         "install_completed_pending_qa",
         "completed",
         "revisit_required",
+        "awaiting_final_payment",
       ],
       user_role: [
         "admin",
