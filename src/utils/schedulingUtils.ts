@@ -142,17 +142,27 @@ export const calculateDistance = async (postcode1?: string, postcode2?: string):
 
 // Fallback distance calculation for when Mapbox API fails
 const calculateDistanceFallback = (postcode1: string, postcode2: string): number => {
-  // Extract postcode areas more precisely
+  // Extract postcode areas more precisely with proper mapping
   const extractArea = (postcode: string): string => {
     // First try splitting by space and take first part
     const parts = postcode.split(' ');
-    if (parts.length > 1) {
-      return parts[0];
-    }
+    let area = parts.length > 1 ? parts[0] : postcode;
     
     // If no space, extract area code (first 1-2 letters + optional digit(s))
-    const match = postcode.match(/^([A-Z]{1,2}\d{1,2})/);
-    return match ? match[1] : postcode.substring(0, 3);
+    if (parts.length === 1) {
+      const match = postcode.match(/^([A-Z]{1,2}\d{1,2})/);
+      area = match ? match[1] : postcode.substring(0, 3);
+    }
+    
+    // Map specific numbered areas to their base area for distance lookup
+    const areaMap: Record<string, string> = {
+      'LS1': 'LS', 'LS2': 'LS', 'LS3': 'LS', 'LS4': 'LS', 'LS5': 'LS',
+      'M1': 'M', 'M2': 'M', 'M3': 'M', 'M4': 'M', 'M5': 'M',
+      'B1': 'B', 'B2': 'B', 'B3': 'B', 'B4': 'B', 'B5': 'B',
+      'L1': 'L', 'L2': 'L', 'L3': 'L', 'L4': 'L', 'L5': 'L'
+    };
+    
+    return areaMap[area] || area;
   };
   
   const area1 = extractArea(postcode1);
@@ -166,27 +176,30 @@ const calculateDistanceFallback = (postcode1: string, postcode2: string): number
     return 2;
   }
   
-  // Enhanced distance lookup table for UK postcode areas
+  // Enhanced distance lookup table for UK postcode areas (using base areas)
   const distanceMap: Record<string, Record<string, number>> = {
-    'M1': { 'M2': 5, 'M3': 8, 'B1': 85, 'L1': 35, 'LS': 45, 'MK': 65, 'MK17': 65 },
-    'M2': { 'M1': 5, 'M3': 10, 'B1': 90, 'L1': 40, 'LS': 50, 'MK': 70, 'MK17': 70 },
-    'B1': { 'M1': 85, 'M2': 90, 'B2': 10, 'L1': 120, 'LS': 130, 'MK': 45, 'MK17': 45 },
-    'L1': { 'M1': 35, 'M2': 40, 'B1': 120, 'LS': 75, 'MK': 95, 'MK17': 95 },
-    'LS': { 'M1': 45, 'M2': 50, 'B1': 130, 'L1': 75, 'MK': 85, 'MK17': 85 },
-    'MK': { 'M1': 65, 'M2': 70, 'B1': 45, 'L1': 95, 'LS': 85, 'MK17': 5 },
-    'MK17': { 'M1': 65, 'M2': 70, 'B1': 45, 'L1': 95, 'LS': 85, 'MK': 5 }
+    'M': { 'B': 85, 'L': 35, 'LS': 45, 'MK': 65, 'MK17': 65 },
+    'B': { 'M': 85, 'L': 120, 'LS': 130, 'MK': 45, 'MK17': 45 },
+    'L': { 'M': 35, 'B': 120, 'LS': 75, 'MK': 95, 'MK17': 95 },
+    'LS': { 'M': 45, 'B': 130, 'L': 75, 'MK': 85, 'MK17': 85 },
+    'MK': { 'M': 65, 'B': 45, 'L': 95, 'LS': 85, 'MK17': 5 },
+    'MK17': { 'M': 65, 'B': 45, 'L': 95, 'LS': 85, 'MK': 5 }
   };
   
   // Try exact match first
   const exactDistance = distanceMap[area1]?.[area2] || distanceMap[area2]?.[area1];
   if (exactDistance) {
-    console.log(`Found exact match: ${exactDistance} miles`);
+    console.log(`✅ Found exact match in distance map: ${area1} to ${area2} = ${exactDistance} miles`);
     return exactDistance;
   }
   
+  console.log(`❌ No match in distance map for ${area1} to ${area2}, using similarity fallback`);
+  
   // Fallback to similarity-based distance
   const similarity = calculatePostcodeSimilarity(area1, area2);
-  return Math.floor((1 - similarity) * 50) + 2; // 2-52 miles based on similarity
+  const fallbackDistance = Math.floor((1 - similarity) * 50) + 2; // 2-52 miles based on similarity
+  console.log(`Similarity fallback: ${similarity} similarity = ${fallbackDistance} miles`);
+  return fallbackDistance;
 };
 
 const calculatePostcodeSimilarity = (area1: string, area2: string): number => {
