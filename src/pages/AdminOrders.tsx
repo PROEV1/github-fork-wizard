@@ -22,7 +22,7 @@ interface Order {
   amount_paid: number;
   deposit_amount: number;
   created_at: string;
-  installation_date: string | null;
+  scheduled_install_date: string | null;
   engineer_id: string | null;
   client: {
     id: string;
@@ -356,8 +356,8 @@ export default function AdminOrders() {
                     </TableCell>
                     <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {order.installation_date 
-                        ? new Date(order.installation_date).toLocaleDateString()
+                      {order.scheduled_install_date 
+                        ? new Date(order.scheduled_install_date).toLocaleDateString()
                         : 'Not scheduled'
                       }
                     </TableCell>
