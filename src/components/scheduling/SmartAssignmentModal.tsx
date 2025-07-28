@@ -23,7 +23,7 @@ interface SmartAssignmentModalProps {
 
 interface EngineerSuggestion {
   engineer: Engineer;
-  availableDate: string;
+  availableDate?: string;
   distance: number;
   travelTime: number;
   score: number;
@@ -57,7 +57,7 @@ export function SmartAssignmentModal({
         setSuggestions(result.recommendations);
         
         // Auto-select the first available date if no date is selected
-        if (!selectedDate && result.recommendations.length > 0) {
+        if (!selectedDate && result.recommendations.length > 0 && result.recommendations[0].availableDate) {
           setSelectedDate(new Date(result.recommendations[0].availableDate));
         }
       } catch (error) {
@@ -174,7 +174,9 @@ export function SmartAssignmentModal({
                         `}
                         onClick={() => {
                           setSelectedEngineerId(suggestion.engineer.id);
-                          setSelectedDate(new Date(suggestion.availableDate));
+                          if (suggestion.availableDate) {
+                            setSelectedDate(new Date(suggestion.availableDate));
+                          }
                         }}
                       >
                         <CardContent className="p-3">
@@ -189,9 +191,11 @@ export function SmartAssignmentModal({
                                 <p className="text-xs text-muted-foreground">
                                   {suggestion.engineer.region}
                                 </p>
-                                <p className="text-xs text-primary font-medium">
-                                  Available: {new Date(suggestion.availableDate).toLocaleDateString()}
-                                </p>
+                                {suggestion.availableDate && (
+                                  <p className="text-xs text-primary font-medium">
+                                    Available: {new Date(suggestion.availableDate).toLocaleDateString()}
+                                  </p>
+                                )}
                               </div>
                               <Badge variant="default">
                                 Score: {Math.round(suggestion.score)}

@@ -9,7 +9,7 @@ import { MapPin, Clock, User, Star, Zap, CheckCircle, X, RefreshCw } from 'lucid
 
 interface EngineerSuggestion {
   engineer: Engineer;
-  availableDate: string;
+  availableDate?: string;
   distance: number;
   travelTime: number;
   score: number;
@@ -164,9 +164,11 @@ export function EngineerRecommendationPanel({
                     <div>
                       <p className="font-medium text-sm">{suggestion.engineer.name}</p>
                       <p className="text-xs text-muted-foreground">{suggestion.engineer.region}</p>
-                      <p className="text-xs text-primary font-medium">
-                        Available: {new Date(suggestion.availableDate).toLocaleDateString()}
-                      </p>
+                      {suggestion.availableDate && (
+                        <p className="text-xs text-primary font-medium">
+                          Available: {new Date(suggestion.availableDate).toLocaleDateString()}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
