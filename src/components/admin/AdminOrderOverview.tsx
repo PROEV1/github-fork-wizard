@@ -136,11 +136,15 @@ export function AdminOrderOverview({ order }: AdminOrderOverviewProps) {
             <h4 className="font-medium text-sm text-muted-foreground">Installation Date</h4>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              <span className="text-sm">
-                {order.scheduled_install_date 
-                  ? new Date(order.scheduled_install_date).toLocaleDateString()
-                  : 'Not Booked'
-                }
+               <span className="text-sm">
+                 {order.scheduled_install_date 
+                   ? new Date(order.scheduled_install_date).toLocaleDateString('en-GB', {
+                       day: '2-digit',
+                       month: '2-digit',
+                       year: 'numeric'
+                     })
+                   : 'Not Booked'
+                 }
               </span>
             </div>
           </div>
