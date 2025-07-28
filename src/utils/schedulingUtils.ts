@@ -108,13 +108,25 @@ export const calculateDistance = async (postcode1?: string, postcode2?: string):
     destinations: [cleanPostcode2]
   }, null, 2));
   
+  console.log('🚀 About to call supabase.functions.invoke...');
+  
   try {
+    console.log('🎯 Calling invoke with data:', {
+      functionName: 'mapbox-distance',
+      body: {
+        origins: [cleanPostcode1],
+        destinations: [cleanPostcode2]
+      }
+    });
+    
     const { data, error } = await supabase.functions.invoke('mapbox-distance', {
       body: {
         origins: [cleanPostcode1],
         destinations: [cleanPostcode2]
       }
     });
+    
+    console.log('🎉 Invoke completed successfully!');
     
     console.log('📨 Raw Mapbox response:', { data, error });
     console.log('📊 Response status:', data ? 'data received' : 'no data');
