@@ -247,7 +247,7 @@ export default function ClientDashboard() {
     setQuoteAccepted(prev => ({ ...prev, [quoteId]: accepted }));
   };
 
-  const handleQuoteAction = async (quoteId: string, action: 'accepted' | 'declined') => {
+  const handleQuoteAction = async (quoteId: string, action: 'accepted' | 'rejected') => {
     try {
       const quote = quotes.find(q => q.id === quoteId);
       if (!quote) {
@@ -307,10 +307,26 @@ export default function ClientDashboard() {
 
         // Redirect to order detail page
         window.open(`/order/${order.id}`, '_blank');
-      } else {
+      } else if (action === 'rejected') {
+        // Check if there's an associated order and delete it
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('quote_id', quoteId)
+          .single();
+
+        if (orderData) {
+          const { error: deleteError } = await supabase
+            .from('orders')
+            .delete()
+            .eq('quote_id', quoteId);
+
+          if (deleteError) throw deleteError;
+        }
+
         toast({
           title: "Success",
-          description: `Quote ${action} successfully!`,
+          description: "Quote rejected successfully!",
         });
       }
 
@@ -448,6 +464,7 @@ export default function ClientDashboard() {
       sent: { label: 'Pending', variant: 'secondary' as const, icon: Clock },
       accepted: { label: 'Accepted', variant: 'default' as const, icon: CheckCircle },
       declined: { label: 'Declined', variant: 'destructive' as const, icon: AlertCircle },
+      rejected: { label: 'Rejected', variant: 'destructive' as const, icon: AlertCircle },
       quote_accepted: { label: 'Awaiting Survey', variant: 'secondary' as const, icon: Calendar },
       scheduled: { label: 'Scheduled', variant: 'default' as const, icon: Calendar },
       fitting: { label: 'Fitting', variant: 'default' as const, icon: Settings },
@@ -699,7 +716,7 @@ export default function ClientDashboard() {
                           className={
                             quote.status === 'accepted' 
                               ? 'bg-green-500 hover:bg-green-600' 
-                              : quote.status === 'declined'
+                              : quote.status === 'rejected'
                               ? 'bg-red-500 hover:bg-red-600'
                               : 'bg-blue-500 hover:bg-blue-600'
                           }
@@ -745,7 +762,7 @@ export default function ClientDashboard() {
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleQuoteAction(quote.id, 'declined');
+                                    handleQuoteAction(quote.id, 'rejected');
                                   }}
                                 >
                                   Decline
@@ -785,6 +802,7 @@ export default function ClientDashboard() {
             quote={selectedQuote} 
             onBack={() => setSelectedQuote(null)}
             onAccept={(quoteId) => handleQuoteAction(quoteId, 'accepted')}
+            onReject={(quoteId) => handleQuoteAction(quoteId, 'rejected')}
             order={getOrderForQuote(selectedQuote.id)}
           />
         )}

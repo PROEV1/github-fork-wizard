@@ -448,21 +448,14 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
                 </Button>
               </>
             )}
-            {quote.status === 'accepted' && (
-              <>
-                {order && (
-                  <Button 
-                    onClick={() => window.open(`/order/${order.id}`, '_blank')}
-                    className="bg-brand-blue hover:bg-brand-blue-dark text-white"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Order
-                  </Button>
-                )}
-                <Button onClick={handleRejectQuote} variant="destructive">
-                  Reject Quote
-                </Button>
-              </>
+            {quote.status === 'accepted' && order && (
+              <Button 
+                onClick={() => window.open(`/order/${order.id}`, '_blank')}
+                className="bg-brand-blue hover:bg-brand-blue-dark text-white"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                View Order
+              </Button>
             )}
             {quote.status === 'rejected' && (
               <Button onClick={handleAcceptQuote} className="bg-brand-green hover:bg-brand-green-dark text-white">
