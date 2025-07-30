@@ -88,6 +88,52 @@ export default function AdminQuoteDetail() {
     navigate('/admin/quotes');
   };
 
+  const handleRejectQuote = async (quoteId: string) => {
+    try {
+      // Update quote status to rejected
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update({ 
+          status: 'rejected'
+        })
+        .eq('id', quoteId);
+
+      if (updateError) throw updateError;
+
+      // Check if there's an associated order and delete it
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('quote_id', quoteId)
+        .single();
+
+      if (orderData) {
+        const { error: deleteError } = await supabase
+          .from('orders')
+          .delete()
+          .eq('quote_id', quoteId);
+
+        if (deleteError) throw deleteError;
+      }
+
+      toast({
+        title: "Quote Rejected",
+        description: "Quote has been rejected successfully",
+      });
+
+      // Refresh quote data
+      fetchQuote();
+
+    } catch (error) {
+      console.error('Error rejecting quote:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject quote",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAcceptQuote = async (quoteId: string) => {
     try {
       // Update quote status to accepted
@@ -176,6 +222,7 @@ export default function AdminQuoteDetail() {
           quote={quote} 
           onBack={handleBack}
           onAccept={handleAcceptQuote}
+          onReject={handleRejectQuote}
         />
       </BrandContainer>
     </BrandPage>

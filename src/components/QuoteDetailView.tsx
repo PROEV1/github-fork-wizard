@@ -67,6 +67,7 @@ interface QuoteDetailViewProps {
   quote: Quote;
   onBack: () => void;
   onAccept?: (quoteId: string) => void;
+  onReject?: (quoteId: string) => void;
   order?: {
     id: string;
     order_number: string;
@@ -74,7 +75,7 @@ interface QuoteDetailViewProps {
   } | null;
 }
 
-export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack, onAccept, order }) => {
+export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack, onAccept, onReject, order }) => {
   const [quoteItems, setQuoteItems] = useState<QuoteItem[]>([]);
   const [compatibilities, setCompatibilities] = useState<ProductCompatibility[]>([]);
   const [loading, setLoading] = useState(true);
@@ -237,6 +238,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
     switch (status) {
       case 'sent': return 'bg-brand-teal text-white';
       case 'accepted': return 'bg-brand-green text-white';
+      case 'rejected': return 'bg-destructive text-destructive-foreground';
       case 'declined': return 'bg-destructive text-destructive-foreground';
       case 'expired': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
@@ -392,6 +394,12 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
     }
   };
 
+  const handleRejectQuote = () => {
+    if (onReject) {
+      onReject(quote.id);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -430,18 +438,36 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
           
           <div className="flex space-x-2">
             {quote.status === 'sent' && (
+              <>
+                <Button onClick={handleAcceptQuote} className="bg-brand-green hover:bg-brand-green-dark text-white">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Accept Quote
+                </Button>
+                <Button onClick={handleRejectQuote} variant="destructive">
+                  Reject Quote
+                </Button>
+              </>
+            )}
+            {quote.status === 'accepted' && (
+              <>
+                {order && (
+                  <Button 
+                    onClick={() => window.open(`/order/${order.id}`, '_blank')}
+                    className="bg-brand-blue hover:bg-brand-blue-dark text-white"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Order
+                  </Button>
+                )}
+                <Button onClick={handleRejectQuote} variant="destructive">
+                  Reject Quote
+                </Button>
+              </>
+            )}
+            {quote.status === 'rejected' && (
               <Button onClick={handleAcceptQuote} className="bg-brand-green hover:bg-brand-green-dark text-white">
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Accept Quote
-              </Button>
-            )}
-            {quote.status === 'accepted' && order && (
-              <Button 
-                onClick={() => window.open(`/order/${order.id}`, '_blank')}
-                className="bg-brand-blue hover:bg-brand-blue-dark text-white"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                View Order
               </Button>
             )}
             <DropdownMenu>
