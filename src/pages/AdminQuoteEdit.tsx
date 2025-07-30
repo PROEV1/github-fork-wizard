@@ -91,6 +91,7 @@ export default function AdminQuoteEdit() {
   const [loading, setLoading] = useState(false);
   const [fetchingQuote, setFetchingQuote] = useState(true);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [defaultDepositPercentage, setDefaultDepositPercentage] = useState(0);
   const [newClientData, setNewClientData] = useState({
     full_name: '',
     email: '',
@@ -221,7 +222,9 @@ export default function AdminQuoteEdit() {
       }
 
       // Store defaults for later use, don't override existing quote data
-      return data.setting_value as any;
+      const defaults = data.setting_value as any;
+      setDefaultDepositPercentage(defaults.default_deposit_percentage || 0);
+      return defaults;
     } catch (error) {
       console.error('Error fetching quote defaults:', error);
       return null;

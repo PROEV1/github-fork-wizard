@@ -60,6 +60,7 @@ export default function AdminQuoteCreate() {
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [defaultDepositPercentage, setDefaultDepositPercentage] = useState(0);
   const [newClientData, setNewClientData] = useState({
     full_name: '',
     email: '',
@@ -79,6 +80,19 @@ export default function AdminQuoteCreate() {
     notes: '',
     expires_at: '',
   });
+
+  // Calculate deposit when products change
+  useEffect(() => {
+    if (selectedProducts.length > 0 && defaultDepositPercentage > 0) {
+      const totalCost = selectedProducts.reduce((sum, sp) => sum + sp.totalPrice, 0);
+      if (formData.deposit_required === 0) {
+        setFormData(prev => ({
+          ...prev,
+          deposit_required: Math.round(totalCost * (defaultDepositPercentage / 100))
+        }));
+      }
+    }
+  }, [selectedProducts, defaultDepositPercentage]);
 
   useEffect(() => {
     fetchClients();
@@ -121,9 +135,11 @@ export default function AdminQuoteCreate() {
       const defaults = data.setting_value as any;
       setFormData(prev => ({
         ...prev,
-        deposit_required: (prev.deposit_required === 0) ? (defaults.default_deposit_percentage || 0) : prev.deposit_required,
         warranty_period: defaults.default_warranty_period || '5 years'
       }));
+      
+      // Store the percentage for later calculation when products are selected
+      setDefaultDepositPercentage(defaults.default_deposit_percentage || 0);
     } catch (error) {
       console.error('Error fetching quote defaults:', error);
     }
