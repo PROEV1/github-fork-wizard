@@ -15,12 +15,18 @@ import { Save, Settings, CreditCard, Mail, MessageSquare, Bell, AlertTriangle, C
 import { SchedulingSettingsPanel } from '@/components/admin/SchedulingSettingsPanel';
 
 interface AdminSettings {
+  quote_defaults: QuoteDefaults;
   payment_config: PaymentConfig;
   stripe_config: StripeConfig;
   email_config: EmailConfig;
   sms_config: SmsConfig;
   notification_settings: NotificationSettings;
   system_settings: SystemSettings;
+}
+
+interface QuoteDefaults {
+  default_deposit_percentage: number;
+  default_warranty_period: string;
 }
 
 interface PaymentConfig {
@@ -104,6 +110,10 @@ interface SystemSettings {
 }
 
 const defaultSettings: AdminSettings = {
+  quote_defaults: {
+    default_deposit_percentage: 30,
+    default_warranty_period: '5 years'
+  },
   payment_config: {
     payment_stage: 'deposit',
     deposit_type: 'percentage',
@@ -308,8 +318,12 @@ export default function AdminSettings() {
             </div>
           )}
 
-          <Tabs defaultValue="scheduling" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+          <Tabs defaultValue="quotes" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-7">
+              <TabsTrigger value="quotes" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span>Quotes</span>
+              </TabsTrigger>
               <TabsTrigger value="scheduling" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span>Scheduling</span>
@@ -335,6 +349,61 @@ export default function AdminSettings() {
                 <span>System</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Quote Defaults Configuration */}
+            <TabsContent value="quotes" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quote Defaults</CardTitle>
+                  <CardDescription>Set default values for new quotes</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <Label>Default Deposit Percentage</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={settings.quote_defaults.default_deposit_percentage}
+                        onChange={(e) => updateSettings('quote_defaults', { 
+                          default_deposit_percentage: parseInt(e.target.value) || 0 
+                        })}
+                        placeholder="30"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Default deposit percentage for new quotes (can be overridden when creating quotes)
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label>Default Warranty Period</Label>
+                      <Select 
+                        value={settings.quote_defaults.default_warranty_period} 
+                        onValueChange={(value) => 
+                          updateSettings('quote_defaults', { default_warranty_period: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1 year">1 Year</SelectItem>
+                          <SelectItem value="2 years">2 Years</SelectItem>
+                          <SelectItem value="3 years">3 Years</SelectItem>
+                          <SelectItem value="5 years">5 Years</SelectItem>
+                          <SelectItem value="10 years">10 Years</SelectItem>
+                          <SelectItem value="Lifetime">Lifetime</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        Default warranty period for new quotes
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Scheduling Configuration */}
             <TabsContent value="scheduling" className="space-y-6">

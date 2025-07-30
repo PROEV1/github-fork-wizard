@@ -82,6 +82,7 @@ export default function AdminQuoteCreate() {
 
   useEffect(() => {
     fetchClients();
+    fetchQuoteDefaults();
   }, []);
 
   const fetchClients = async () => {
@@ -101,6 +102,30 @@ export default function AdminQuoteCreate() {
         description: "Failed to load clients",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchQuoteDefaults = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'quote_defaults')
+        .single();
+
+      if (error || !data) {
+        console.log('No quote defaults found, using hardcoded defaults');
+        return;
+      }
+
+      const defaults = data.setting_value as any;
+      setFormData(prev => ({
+        ...prev,
+        deposit_required: (prev.deposit_required === 0) ? (defaults.default_deposit_percentage || 0) : prev.deposit_required,
+        warranty_period: defaults.default_warranty_period || '5 years'
+      }));
+    } catch (error) {
+      console.error('Error fetching quote defaults:', error);
     }
   };
 

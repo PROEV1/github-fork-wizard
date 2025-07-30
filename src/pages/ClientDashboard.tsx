@@ -293,7 +293,8 @@ export default function ClientDashboard() {
             total_amount: quote.total_cost,
             deposit_amount: depositAmount,
             status: 'awaiting_payment',
-            job_address: client?.address
+            job_address: client?.address,
+            internal_install_notes: quote.room_info // Store understairs width
           })
           .select()
           .single();

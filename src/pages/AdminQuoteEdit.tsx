@@ -113,6 +113,7 @@ export default function AdminQuoteEdit() {
 
   useEffect(() => {
     fetchClients();
+    fetchQuoteDefaults();
     if (id) {
       fetchQuote();
     }
@@ -203,6 +204,27 @@ export default function AdminQuoteEdit() {
         description: "Failed to load clients",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchQuoteDefaults = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'quote_defaults')
+        .maybeSingle();
+
+      if (error || !data) {
+        console.log('No quote defaults found, using hardcoded defaults');
+        return;
+      }
+
+      // Store defaults for later use, don't override existing quote data
+      return data.setting_value as any;
+    } catch (error) {
+      console.error('Error fetching quote defaults:', error);
+      return null;
     }
   };
 

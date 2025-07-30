@@ -629,6 +629,37 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
         })()}
       </div>
 
+      {/* Quote Details */}
+      {(quote.room_info || quote.range || quote.finish) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Quote Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4">
+              {quote.room_info && (
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Understairs Width</h4>
+                  <p className="font-medium">{quote.room_info}</p>
+                </div>
+              )}
+              {quote.range && (
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Range</h4>
+                  <p className="font-medium">{quote.range}</p>
+                </div>
+              )}
+              {quote.finish && (
+                <div>
+                  <h4 className="font-medium text-sm text-muted-foreground">Finish</h4>
+                  <p className="font-medium">{quote.finish}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* What's Always Included */}
       <Card>
         <CardHeader>

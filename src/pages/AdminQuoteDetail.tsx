@@ -181,7 +181,8 @@ export default function AdminQuoteDetail() {
             quote_id: quoteData.id,
             total_amount: quoteData.total_cost,
             deposit_amount: quoteData.deposit_required || (quoteData.total_cost * 0.25),
-            job_address: quoteData.client.address || null
+            job_address: quoteData.client.address || null,
+            internal_install_notes: quoteData.room_info // Store understairs width
           })
           .select()
           .single();
