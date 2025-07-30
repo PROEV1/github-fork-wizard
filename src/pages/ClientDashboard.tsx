@@ -313,7 +313,7 @@ export default function ClientDashboard() {
           .from('orders')
           .select('id')
           .eq('quote_id', quoteId)
-          .single();
+          .maybeSingle();
 
         if (orderData) {
           const { error: deleteError } = await supabase
