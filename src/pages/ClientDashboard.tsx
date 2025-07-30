@@ -336,6 +336,15 @@ export default function ClientDashboard() {
       if (selectedQuote && selectedQuote.id === quoteId) {
         setSelectedQuote({ ...selectedQuote, status: action });
       }
+      
+      // Update quotes list immediately to refresh the overview
+      setQuotes(prevQuotes => 
+        prevQuotes.map(quote => 
+          quote.id === quoteId 
+            ? { ...quote, status: action }
+            : quote
+        )
+      );
     } catch (error) {
       console.error('Error updating quote:', error);
       toast({
@@ -468,7 +477,6 @@ export default function ClientDashboard() {
     const statusConfig = {
       sent: { label: 'Pending', variant: 'secondary' as const, icon: Clock },
       accepted: { label: 'Accepted', variant: 'default' as const, icon: CheckCircle },
-      declined: { label: 'Declined', variant: 'destructive' as const, icon: AlertCircle },
       rejected: { label: 'Rejected', variant: 'destructive' as const, icon: AlertCircle },
       quote_accepted: { label: 'Awaiting Survey', variant: 'secondary' as const, icon: Calendar },
       scheduled: { label: 'Scheduled', variant: 'default' as const, icon: Calendar },
@@ -770,7 +778,7 @@ export default function ClientDashboard() {
                                     handleQuoteAction(quote.id, 'rejected');
                                   }}
                                 >
-                                  Decline
+                                  Reject Quote
                                 </Button>
                                 <Button 
                                   size="sm"
