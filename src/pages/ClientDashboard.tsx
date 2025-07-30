@@ -330,7 +330,12 @@ export default function ClientDashboard() {
         });
       }
 
-      loadClientData();
+      await loadClientData();
+      
+      // Update selectedQuote with the new status if it's currently selected
+      if (selectedQuote && selectedQuote.id === quoteId) {
+        setSelectedQuote({ ...selectedQuote, status: action });
+      }
     } catch (error) {
       console.error('Error updating quote:', error);
       toast({
