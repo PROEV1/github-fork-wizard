@@ -433,7 +433,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="best_for_stairs">Best for Stairs</Label>
+              <Label htmlFor="best_for_stairs">Staircase Type</Label>
               <Select
                 value={formData.best_for_stairs}
                 onValueChange={(value) => setFormData({ ...formData, best_for_stairs: value })}
