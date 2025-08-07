@@ -56,7 +56,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
     category: product?.category || '',
     is_active: product?.is_active ?? true,
     specifications: product?.specifications || {},
-    min_width: product?.min_width || ''
+    min_width: product?.min_width || '',
+    best_for_stairs: product?.specifications?.best_for_stairs || ''
   });
 
   useEffect(() => {
@@ -246,7 +247,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
         base_price: formData.base_price,
         category: formData.category || null,
         is_active: formData.is_active,
-        specifications: formData.specifications,
+        specifications: {
+          ...formData.specifications,
+          ...(formData.category === 'Core' && formData.best_for_stairs
+            ? { best_for_stairs: formData.best_for_stairs }
+            : {})
+        },
         min_width: formData.category === 'Core' && formData.min_width ? parseFloat(formData.min_width.toString()) : null
       };
 
@@ -380,19 +386,36 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
           </div>
         </div>
 
-        {/* Min Width field (only for Core products) */}
+        {/* Core-specific fields */}
         {formData.category === 'Core' && (
-          <div className="space-y-2">
-            <Label htmlFor="min_width">Minimum Width (cm)</Label>
-            <Input
-              id="min_width"
-              type="number"
-              min="0"
-              step="0.1"
-              value={formData.min_width}
-              onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
-              placeholder="Enter minimum width in centimeters"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="min_width">Minimum Width (cm)</Label>
+              <Input
+                id="min_width"
+                type="number"
+                min="0"
+                step="0.1"
+                value={formData.min_width}
+                onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
+                placeholder="Enter minimum width in centimeters"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="best_for_stairs">Best for Stairs</Label>
+              <Select
+                value={formData.best_for_stairs}
+                onValueChange={(value) => setFormData({ ...formData, best_for_stairs: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Straight Stairs">Straight Stairs</SelectItem>
+                  <SelectItem value="Stairs with turn">Stairs with turn</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
 
