@@ -57,7 +57,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
     is_active: product?.is_active ?? true,
     specifications: product?.specifications || {},
     min_width: product?.min_width || '',
-    best_for_stairs: product?.specifications?.best_for_stairs || ''
+    max_width: product?.specifications?.max_width || '',
+    best_for_stairs: product?.specifications?.best_for_stairs || '',
+    sub_description: product?.specifications?.sub_description || ''
   });
 
   useEffect(() => {
@@ -249,8 +251,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
         is_active: formData.is_active,
         specifications: {
           ...formData.specifications,
+          ...(formData.sub_description ? { sub_description: formData.sub_description } : {}),
           ...(formData.category === 'Core' && formData.best_for_stairs
             ? { best_for_stairs: formData.best_for_stairs }
+            : {}),
+          ...(formData.category === 'Core' && formData.max_width
+            ? { max_width: parseFloat(formData.max_width.toString()) }
             : {})
         },
         min_width: formData.category === 'Core' && formData.min_width ? parseFloat(formData.min_width.toString()) : null
@@ -351,6 +357,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
           />
         </div>
 
+        {(formData.category === 'Core' || formData.category === 'Accessories') && (
+          <div className="space-y-2">
+            <Label htmlFor="sub_description">Sub Description</Label>
+            <Input
+              id="sub_description"
+              value={formData.sub_description}
+              onChange={(e) => setFormData({ ...formData, sub_description: e.target.value })}
+              placeholder="Enter sub description"
+            />
+          </div>
+        )}
+
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="base_price">Base Price (£) *</Label>
@@ -388,7 +407,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
 
         {/* Core-specific fields */}
         {formData.category === 'Core' && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="min_width">Minimum Width (cm)</Label>
               <Input
@@ -399,6 +418,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({ product, onSuccess, on
                 value={formData.min_width}
                 onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
                 placeholder="Enter minimum width in centimeters"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max_width">Max Width (cm)</Label>
+              <Input
+                id="max_width"
+                type="number"
+                min="0"
+                step="0.1"
+                value={formData.max_width}
+                onChange={(e) => setFormData({ ...formData, max_width: e.target.value })}
+                placeholder="Enter maximum width in centimeters"
               />
             </div>
             <div className="space-y-2">
