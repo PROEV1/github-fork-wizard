@@ -1,114 +1,77 @@
-
-import { Button } from "@/components/ui/button";
-import { ProSpacesLogo } from "@/components/ProSpacesLogo";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { LayoutDashboard, Users, FileText, Calendar } from 'lucide-react';
 
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { role, loading: roleLoading } = useUserRole();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log('Index: Auth state check', { 
-      user: user?.id, 
-      role, 
-      authLoading, 
-      roleLoading 
-    });
-    
-    // If user is authenticated and we have their role, redirect to appropriate dashboard
-    if (!authLoading && !roleLoading && user && role) {
-      console.log('Index: All data loaded, redirecting based on role:', role);
-      switch (role) {
-        case 'admin':
-          console.log('Index: Redirecting admin to dashboard');
-          navigate('/dashboard');
-          break;
-        case 'engineer':
-          console.log('Index: Redirecting engineer to engineer dashboard');
-          navigate('/engineer');
-          break;
-        case 'client':
-          console.log('Index: Redirecting client to client dashboard');
-          navigate('/client');
-          break;
-        default:
-          console.log('Index: Unknown role, defaulting to client dashboard');
-          navigate('/client');
-      }
-    } else if (!authLoading && !roleLoading && user && !role) {
-      console.log('Index: User authenticated but no role found, defaulting to client');
-      navigate('/client');
-    }
-  }, [user, role, authLoading, roleLoading, navigate]);
-
-  // Show landing page for unauthenticated users or while loading
-  if (authLoading || roleLoading) {
-    console.log('Index: Still loading', { authLoading, roleLoading });
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-teal"></div>
-      </div>
-    );
-  }
-  
-  // If user is authenticated but we're still here, something went wrong with redirect
-  if (user) {
-    console.log('Index: User authenticated but still on landing page', { user: user.id, role });
-  }
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
-      <div className="text-center max-w-4xl mx-auto p-8">
-        <div className="mb-8">
-          <ProSpacesLogo variant="main" size="xl" className="mx-auto mb-6" />
-        </div>
-        
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 shadow-2xl">
-          <div className="flex items-center justify-center mb-6">
-            <Sparkles className="h-8 w-8 text-brand-teal mr-3" />
-            <h1 className="text-5xl font-bold text-primary brand-heading-1">
-              Welcome to ProSpaces
-            </h1>
-          </div>
-          
-          <h2 className="text-2xl text-muted-foreground mb-8 brand-heading-2">
-            Your Professional Space Design Platform
-          </h2>
-          
-          <p className="text-lg text-muted-foreground mb-12 brand-body max-w-2xl mx-auto">
-            Transform your workspace with our comprehensive design solutions. 
-            From consultation to completion, we bring your vision to life.
+    <div className="min-h-screen bg-gradient-hero">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-white mb-6">
+            Business Management System
+          </h1>
+          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Streamline your operations with our comprehensive platform for managing clients, engineers, quotes, and orders.
           </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="brand-gradient-teal p-6 rounded-xl text-white">
-              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Design</h3>
-              <p className="brand-body">Professional space planning and interior design services</p>
-            </div>
-            
-            <div className="brand-gradient-pink p-6 rounded-xl text-primary">
-              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Consultation</h3>
-              <p className="brand-body">Expert advice tailored to your specific needs and budget</p>
-            </div>
-            
-            <div className="brand-gradient-green p-6 rounded-xl text-primary">
-              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Implementation</h3>
-              <p className="brand-body">Full project management from concept to completion</p>
-            </div>
+          <div className="space-x-4">
+            <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90">
+              <Link to="/auth">Get Started</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white/10">
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
           </div>
-          
-          <Button 
-            onClick={() => window.location.href = "/auth"} 
-            size="lg"
-            className="bg-brand-teal hover:bg-brand-teal-dark text-white px-8 py-4 text-lg brand-body"
-          >
-            Get Started Today
-            <ArrowRight className="h-5 w-5 ml-2" />
-          </Button>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <Card className="bg-white/10 border-white/20 text-white">
+            <CardHeader>
+              <LayoutDashboard className="w-12 h-12 mb-4 text-white" />
+              <CardTitle>Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-white/80">
+                Comprehensive overview of your business operations
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/10 border-white/20 text-white">
+            <CardHeader>
+              <Users className="w-12 h-12 mb-4 text-white" />
+              <CardTitle>Client Management</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-white/80">
+                Manage clients, engineers, and team members
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/10 border-white/20 text-white">
+            <CardHeader>
+              <FileText className="w-12 h-12 mb-4 text-white" />
+              <CardTitle>Quotes & Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-white/80">
+                Create and track quotes, orders, and invoices
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/10 border-white/20 text-white">
+            <CardHeader>
+              <Calendar className="w-12 h-12 mb-4 text-white" />
+              <CardTitle>Scheduling</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-white/80">
+                Advanced scheduling and availability management
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

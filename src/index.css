@@ -1,73 +1,68 @@
-
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Business Management System Design Tokens */
 
 @layer base {
   :root {
-    /* ProSpaces Brand Color Palette */
+    /* Base colors */
     --background: 0 0% 100%;
-    --foreground: 221 37% 19%; /* #2b2e3d */
+    --foreground: 220 13% 13%;
 
+    /* Card components */
     --card: 0 0% 100%;
-    --card-foreground: 221 37% 19%;
+    --card-foreground: 220 13% 13%;
 
+    /* Popover components */
     --popover: 0 0% 100%;
-    --popover-foreground: 221 37% 19%;
+    --popover-foreground: 220 13% 13%;
 
-    /* Primary: #2b2e3d (dark blue-gray) */
-    --primary: 221 37% 19%;
-    --primary-foreground: 0 0% 98%;
+    /* Primary brand colors - Business blue theme */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 84% 57%;
+    --primary-light: 217 91% 85%;
 
-    /* Secondary: #8ac4c2 (teal) */
-    --secondary: 177 29% 66%;
-    --secondary-foreground: 221 37% 19%;
+    /* Secondary colors */
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 220 13% 13%;
 
-    --muted: 44 44% 91%; /* #f5efe8 */
-    --muted-foreground: 221 20% 50%;
+    /* Muted colors */
+    --muted: 210 40% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent colors from palette */
-    --accent: 104 47% 75%; /* #d1d9b0 */
-    --accent-foreground: 221 37% 19%;
+    /* Accent colors */
+    --accent: 210 40% 96%;
+    --accent-foreground: 220 13% 13%;
 
-    /* Brand-specific colors */
-    --brand-teal: 177 29% 66%; /* #8ac4c2 */
-    --brand-teal-light: 177 29% 80%;
-    --brand-teal-dark: 177 29% 50%;
+    /* Status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border and input */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 84% 67%));
+    --gradient-secondary: linear-gradient(135deg, hsl(210 40% 96%), hsl(220 13% 91%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(249 89% 66%) 100%);
     
-    --brand-pink: 347 58% 88%; /* #f7ccd6 */
-    --brand-pink-light: 347 58% 92%;
-    --brand-pink-dark: 347 58% 75%;
+    /* Shadows */
+    --shadow-subtle: 0 1px 3px 0 hsl(220 13% 13% / 0.1), 0 1px 2px 0 hsl(220 13% 13% / 0.06);
+    --shadow-medium: 0 4px 6px -1px hsl(220 13% 13% / 0.1), 0 2px 4px -1px hsl(220 13% 13% / 0.06);
+    --shadow-large: 0 10px 15px -3px hsl(220 13% 13% / 0.1), 0 4px 6px -2px hsl(220 13% 13% / 0.05);
+    --shadow-glow: 0 0 0 1px hsl(217 91% 60% / 0.1), 0 4px 16px hsl(217 91% 60% / 0.15);
+
+    /* Animation */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     
-    --brand-green: 104 47% 75%; /* #d1d9b0 */
-    --brand-green-light: 104 47% 85%;
-    --brand-green-dark: 104 47% 65%;
-    
-    --brand-cream: 44 44% 91%; /* #f5efe8 */
-    --brand-cream-light: 44 44% 95%;
-    --brand-cream-dark: 44 44% 85%;
-
-    --brand-blue: 221 37% 19%; /* Primary blue */
-    --brand-blue-light: 221 37% 30%;
-    --brand-blue-dark: 221 37% 15%;
-
-    /* Additional ProSpaces colors */
-    --accent-pink: 347 58% 88%; /* #f7ccd6 */
-    --accent-green: 100 33% 89%; /* #e5f2e3 */
-    --accent-cream: 44 44% 91%; /* #f5efe8 */
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 177 29% 90%;
-    --input: 177 29% 90%;
-    --ring: 177 29% 66%;
-
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
@@ -81,25 +76,52 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    /* Dark mode colors */
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 84% 57%;
+    --primary-light: 217 91% 20%;
+
+    --secondary: 222 84% 5%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 223 47% 11%;
+    --accent-foreground: 213 31% 91%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 213 31% 91%;
+
+    --border: 223 47% 11%;
+    --input: 223 47% 11%;
+    --ring: 217 91% 60%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 84% 67%));
+    --gradient-secondary: linear-gradient(135deg, hsl(223 47% 11%), hsl(222 84% 5%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(249 89% 66%) 100%);
+    
+    /* Dark mode shadows */
+    --shadow-subtle: 0 1px 3px 0 hsl(0 0% 0% / 0.12), 0 1px 2px 0 hsl(0 0% 0% / 0.24);
+    --shadow-medium: 0 4px 6px -1px hsl(0 0% 0% / 0.12), 0 2px 4px -1px hsl(0 0% 0% / 0.24);
+    --shadow-large: 0 10px 15px -3px hsl(0 0% 0% / 0.25), 0 4px 6px -2px hsl(0 0% 0% / 0.10);
+    --shadow-glow: 0 0 0 1px hsl(217 91% 60% / 0.2), 0 4px 16px hsl(217 91% 60% / 0.25);
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -117,172 +139,65 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Montserrat', sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* ProSpaces Brand Typography */
-  .brand-heading-1, h1 {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 500; /* Medium */
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
 
-  .brand-heading-2, h2 {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 300; /* Light */
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30;
   }
 
-  .brand-heading-3, h3 {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 600; /* Semi-Bold */
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-md;
   }
 
-  .brand-body, .body-text {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 400; /* Regular */
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
   }
 
-  .brand-title {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700; /* Bold for brand elements */
+  /* Smooth transitions for theme switching */
+  * {
+    transition: var(--transition-smooth);
   }
 
-  /* Brand utility classes */
-  .brand-gradient-teal {
-    background: linear-gradient(135deg, hsl(var(--brand-teal-light)), hsl(var(--brand-teal)));
+  /* Focus styles */
+  .focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+}
 
-  .brand-gradient-pink {
-    background: linear-gradient(135deg, hsl(var(--brand-pink-light)), hsl(var(--brand-pink)));
-  }
-
-  .brand-gradient-green {
-    background: linear-gradient(135deg, hsl(var(--brand-green-light)), hsl(var(--brand-green)));
-  }
-
-  .brand-gradient-subtle {
-    background: linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)));
-  }
-
-  /* Brand Status Colors */
-  .status-sent {
-    @apply bg-brand-teal text-white;
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
   }
   
-  .status-accepted {
-    @apply bg-brand-green text-white;
+  .gradient-secondary {
+    background: var(--gradient-secondary);
   }
   
-  .status-declined {
-    @apply bg-destructive text-destructive-foreground;
+  .gradient-hero {
+    background: var(--gradient-hero);
   }
   
-  .status-pending {
-    @apply bg-brand-pink text-white;
-  }
-
-  /* Brand Icon Backgrounds */
-  .icon-bg-teal {
-    @apply bg-brand-teal-light/20;
+  .shadow-subtle {
+    box-shadow: var(--shadow-subtle);
   }
   
-  .icon-bg-pink {
-    @apply bg-brand-pink-light/20;
+  .shadow-medium {
+    box-shadow: var(--shadow-medium);
   }
   
-  .icon-bg-green {
-    @apply bg-brand-green-light/20;
+  .shadow-large {
+    box-shadow: var(--shadow-large);
   }
   
-  .icon-bg-cream {
-    @apply bg-brand-cream/50;
-  }
-
-  /* Brand Card Styles */
-  .brand-card {
-    @apply bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-all duration-200;
-  }
-  
-  .brand-card-interactive {
-    @apply brand-card cursor-pointer hover:shadow-lg hover:border-brand-teal/30 hover:-translate-y-1;
-  }
-
-  /* Brand Button Variants */
-  .btn-brand-primary {
-    @apply bg-brand-teal hover:bg-brand-teal-dark text-white;
-  }
-  
-  .btn-brand-secondary {
-    @apply bg-brand-green hover:bg-brand-green-dark text-white;
-  }
-  
-  .btn-brand-accent {
-    @apply bg-brand-pink hover:bg-brand-pink-dark text-white;
-  }
-
-  /* Brand Badge Styles */
-  .badge-teal {
-    @apply bg-brand-teal text-white;
-  }
-  
-  .badge-green {
-    @apply bg-brand-green text-white;
-  }
-  
-  .badge-pink {
-    @apply bg-brand-pink text-white;
-  }
-  
-  .badge-cream {
-    @apply bg-brand-cream text-primary;
-  }
-
-  /* Brand Container Styles */
-  .brand-page {
-    @apply min-h-screen bg-background;
-  }
-  
-  .brand-container {
-    @apply container mx-auto px-6 py-8;
-  }
-
-  /* Brand Loading Spinner */
-  .brand-spinner {
-    @apply animate-spin rounded-full h-32 w-32 border-b-2 border-brand-teal;
-  }
-
-  /* Custom drag and drop styles */
-  .drop-zone-calendar .rbc-calendar {
-    transition: background-color 0.2s ease;
-  }
-
-  .drop-zone-calendar .rbc-calendar:hover {
-    background-color: hsl(var(--primary) / 0.05);
-  }
-
-  .drop-zone-calendar .rbc-time-view .rbc-time-content {
-    border: 2px dashed transparent;
-    transition: border-color 0.2s ease;
-  }
-
-  .drop-zone-calendar .rbc-time-view .rbc-time-content:hover {
-    border-color: hsl(var(--primary) / 0.3);
-  }
-
-  /* Drag feedback for job cards */
-  .react-flow__node-dragging {
-    transform: rotate(5deg);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  }
-
-  /* Engineer recommendation panel styles */
-  .engineer-recommendation-panel {
-    max-height: 400px;
-    overflow-y: auto;
-    z-index: 1000;
-    background: hsl(var(--background));
-    border: 1px solid hsl(var(--border));
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
   }
 }
