@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ProSpacesLogo } from "@/components/ProSpacesLogo";
+import { ProEVLogo } from "@/components/ProEVLogo";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -64,47 +64,47 @@ const Index = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-cream via-brand-pink-light to-brand-green-light">
       <div className="text-center max-w-4xl mx-auto p-8">
         <div className="mb-8">
-          <ProSpacesLogo variant="main" size="xl" className="mx-auto mb-6" />
+          <ProEVLogo variant="main" size="xl" className="mx-auto mb-6" />
         </div>
         
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 shadow-2xl">
           <div className="flex items-center justify-center mb-6">
             <Sparkles className="h-8 w-8 text-brand-teal mr-3" />
             <h1 className="text-5xl font-bold text-primary brand-heading-1">
-              Welcome to ProSpaces
+              Welcome to Pro EV
             </h1>
           </div>
           
           <h2 className="text-2xl text-muted-foreground mb-8 brand-heading-2">
-            Your Professional Space Design Platform
+            Your Professional EV Charging Solutions
           </h2>
           
           <p className="text-lg text-muted-foreground mb-12 brand-body max-w-2xl mx-auto">
-            Transform your workspace with our comprehensive design solutions. 
-            From consultation to completion, we bring your vision to life.
+            Transform your property with professional EV charging solutions. 
+            From consultation to installation, we deliver reliable charging infrastructure.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="brand-gradient-teal p-6 rounded-xl text-white">
-              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Design</h3>
-              <p className="brand-body">Professional space planning and interior design services</p>
+            <div className="brand-gradient-electric-blue p-6 rounded-xl text-white">
+              <h3 className="text-xl font-semibold mb-3 brand-heading-3">EV Chargers</h3>
+              <p className="brand-body">High-quality home and business EV charging solutions</p>
             </div>
             
-            <div className="brand-gradient-pink p-6 rounded-xl text-primary">
-              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Consultation</h3>
-              <p className="brand-body">Expert advice tailored to your specific needs and budget</p>
+            <div className="brand-gradient-orange p-6 rounded-xl text-primary">
+              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Installation</h3>
+              <p className="brand-body">Professional installation by certified engineers</p>
             </div>
             
-            <div className="brand-gradient-green p-6 rounded-xl text-primary">
-              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Implementation</h3>
-              <p className="brand-body">Full project management from concept to completion</p>
+            <div className="brand-gradient-ev-green p-6 rounded-xl text-primary">
+              <h3 className="text-xl font-semibold mb-3 brand-heading-3">Support</h3>
+              <p className="brand-body">Comprehensive warranty and ongoing maintenance</p>
             </div>
           </div>
           
           <Button 
             onClick={() => window.location.href = "/auth"} 
             size="lg"
-            className="bg-brand-teal hover:bg-brand-teal-dark text-white px-8 py-4 text-lg brand-body"
+            className="bg-brand-electric-blue hover:bg-brand-electric-blue-dark text-white px-8 py-4 text-lg brand-body"
           >
             Get Started Today
             <ArrowRight className="h-5 w-5 ml-2" />

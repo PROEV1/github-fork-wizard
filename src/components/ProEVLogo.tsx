@@ -1,12 +1,12 @@
 import React from 'react';
 
-interface ProSpacesLogoProps {
+interface ProEVLogoProps {
   variant?: 'main' | 'icon' | 'stacked' | 'monochrome';
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const ProSpacesLogo: React.FC<ProSpacesLogoProps> = ({ 
+export const ProEVLogo: React.FC<ProEVLogoProps> = ({ 
   variant = 'main', 
   className = '', 
   size = 'md' 
@@ -24,7 +24,7 @@ export const ProSpacesLogo: React.FC<ProSpacesLogoProps> = ({
   return (
     <img 
       src="/lovable-uploads/97d9570a-a316-4ac2-8def-5eeab6670140.png" 
-      alt="ProSpaces Logo" 
+      alt="Pro EV Logo" 
       className={`${getSizeClasses()} w-auto ${className}`}
     />
   );

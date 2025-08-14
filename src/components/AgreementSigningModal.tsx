@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ProSpacesLogo } from '@/components/ProSpacesLogo';
+import { ProEVLogo } from '@/components/ProEVLogo';
 import { ExternalLink } from 'lucide-react';
 
 interface AgreementSigningModalProps {
@@ -53,7 +53,7 @@ export function AgreementSigningModal({
         if (error) {
           console.error('AgreementSigningModal: Error fetching settings:', error);
           // Set fallback URL if there's an error
-          setAgreementDocumentUrl('https://www.prospaces.co.uk');
+          setAgreementDocumentUrl('https://proev.co.uk');
           return;
         }
 
@@ -71,17 +71,17 @@ export function AgreementSigningModal({
           } else {
             // Fallback if no URL configured
             console.log('AgreementSigningModal: No agreement_document_url found, using fallback');
-            setAgreementDocumentUrl('https://www.prospaces.co.uk');
+            setAgreementDocumentUrl('https://proev.co.uk');
           }
         } else {
           console.log('AgreementSigningModal: No system settings found, using fallback URL');
           // Set fallback URL if no settings found
-          setAgreementDocumentUrl('https://www.prospaces.co.uk');
+          setAgreementDocumentUrl('https://proev.co.uk');
         }
       } catch (error) {
         console.error('AgreementSigningModal: Error in fetchSystemSettings:', error);
         // Set fallback URL on error
-        setAgreementDocumentUrl('https://www.prospaces.co.uk');
+        setAgreementDocumentUrl('https://proev.co.uk');
       }
     };
 
@@ -99,12 +99,12 @@ export function AgreementSigningModal({
       // Provide default agreement content since generate-quote-pdf doesn't handle 'agreement' type
       const defaultAgreementContent = `
         <div class="agreement-content">
-          <h1>ProSpaces Installation Service Agreement</h1>
+          <h1>Pro EV Installation Service Agreement</h1>
           <h2>Order: ${order?.order_number || 'N/A'}</h2>
           <br>
           
           <h3>Agreement Summary</h3>
-          <p>By signing below, you agree to the terms of the ProSpaces Installation Service Agreement. This includes:</p>
+          <p>By signing below, you agree to the terms of the Pro EV Installation Service Agreement. This includes:</p>
           
           <ul>
             <li><strong>Scope of works</strong> as per accepted quote</li>
@@ -127,7 +127,7 @@ export function AgreementSigningModal({
           <p><em>Please review the full agreement using the "View Full Agreement" button before signing.</em></p>
           
           <h3>Terms and Conditions</h3>
-          <p>By signing this agreement, you acknowledge that you have read, understood, and agree to be bound by the terms and conditions of the ProSpaces Installation Service Agreement.</p>
+          <p>By signing this agreement, you acknowledge that you have read, understood, and agree to be bound by the terms and conditions of the Pro EV Installation Service Agreement.</p>
         </div>
       `;
       
@@ -241,7 +241,7 @@ export function AgreementSigningModal({
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <ProSpacesLogo variant="main" size="md" />
+                <ProEVLogo variant="main" size="md" />
                 <div>
                   <DialogTitle className="text-xl">Agreement Review & Signature</DialogTitle>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -259,7 +259,7 @@ export function AgreementSigningModal({
             <h3 className="text-lg font-semibold mb-4">Agreement Summary</h3>
             
             <p className="text-sm text-muted-foreground mb-4">
-              By signing below, you agree to the terms of the ProSpaces Installation Service Agreement. This includes:
+              By signing below, you agree to the terms of the Pro EV Installation Service Agreement. This includes:
             </p>
             
             <ul className="space-y-2 text-sm text-muted-foreground mb-4">
