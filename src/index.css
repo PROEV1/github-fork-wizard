@@ -10,7 +10,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* ProSpaces Brand Color Palette */
+    /* Pro EV Brand Color Palette */
     --background: 0 0% 100%;
     --foreground: 221 37% 19%; /* #2b2e3d */
 
@@ -55,19 +55,10 @@ All colors MUST be HSL.
     --brand-navy: 224 76% 48%; /* #1e3a8a */
     --brand-navy-light: 224 76% 58%;
     --brand-navy-dark: 224 76% 38%;
-    
-    --brand-cream: 44 44% 91%; /* #f5efe8 */
-    --brand-cream-light: 44 44% 95%;
-    --brand-cream-dark: 44 44% 85%;
-
-    --brand-blue: 221 37% 19%; /* Primary blue */
-    --brand-blue-light: 221 37% 30%;
-    --brand-blue-dark: 221 37% 15%;
-
-    /* Additional ProSpaces colors */
-    --accent-pink: 347 58% 88%; /* #f7ccd6 */
-    --accent-green: 100 33% 89%; /* #e5f2e3 */
-    --accent-cream: 44 44% 91%; /* #f5efe8 */
+    /* Additional accent colors for legacy compatibility */
+    --accent-pink: 38 95% 66%; /* Orange light for compatibility */
+    --accent-green: 142 76% 46%; /* EV green light for compatibility */
+    --accent-cream: 210 40% 96%; /* Light gray for compatibility */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -129,7 +120,7 @@ All colors MUST be HSL.
     font-family: 'Montserrat', sans-serif;
   }
 
-  /* ProSpaces Brand Typography */
+  /* Pro EV Brand Typography */
   .brand-heading-1, h1 {
     font-family: 'Montserrat', sans-serif;
     font-weight: 500; /* Medium */
@@ -216,7 +207,7 @@ All colors MUST be HSL.
   }
   
   .brand-card-interactive {
-    @apply brand-card cursor-pointer hover:shadow-lg hover:border-brand-teal/30 hover:-translate-y-1;
+    @apply brand-card cursor-pointer hover:shadow-lg hover:border-brand-electric-blue/30 hover:-translate-y-1;
   }
 
   /* Brand Button Variants - Pro EV */
