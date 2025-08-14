@@ -14,13 +14,349 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      engineers: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          phone: string | null
+          specializations: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          specializations?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          specializations?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      leads: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          created_at: string
+          email: string | null
+          id: string
+          message: string | null
+          name: string
+          phone: string | null
+          source: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          agreement_signed_at: string | null
+          client_id: string
+          completed_date: string | null
+          created_at: string
+          deposit_paid: number
+          engineer_status: string | null
+          id: string
+          manual_status_notes: string | null
+          manual_status_override: boolean | null
+          order_number: string
+          quote_id: string | null
+          scheduled_date: string | null
+          status: string
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          agreement_signed_at?: string | null
+          client_id: string
+          completed_date?: string | null
+          created_at?: string
+          deposit_paid?: number
+          engineer_status?: string | null
+          id?: string
+          manual_status_notes?: string | null
+          manual_status_override?: boolean | null
+          order_number: string
+          quote_id?: string | null
+          scheduled_date?: string | null
+          status?: string
+          total_cost: number
+          updated_at?: string
+        }
+        Update: {
+          agreement_signed_at?: string | null
+          client_id?: string
+          completed_date?: string | null
+          created_at?: string
+          deposit_paid?: number
+          engineer_status?: string | null
+          id?: string
+          manual_status_notes?: string | null
+          manual_status_override?: boolean | null
+          order_number?: string
+          quote_id?: string | null
+          scheduled_date?: string | null
+          status?: string
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          base_cost: number
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          install_cost: number
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          base_cost: number
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          install_cost?: number
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          base_cost?: number
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          install_cost?: number
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      quotes: {
+        Row: {
+          client_id: string
+          created_at: string
+          deposit_required: number
+          expires_at: string | null
+          extras_cost: number
+          id: string
+          install_cost: number
+          materials_cost: number
+          notes: string | null
+          product_details: string
+          quote_number: string
+          status: string
+          total_cost: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          deposit_required?: number
+          expires_at?: string | null
+          extras_cost?: number
+          id?: string
+          install_cost?: number
+          materials_cost?: number
+          notes?: string | null
+          product_details: string
+          quote_number: string
+          status?: string
+          total_cost: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          deposit_required?: number
+          expires_at?: string | null
+          extras_cost?: number
+          id?: string
+          install_cost?: number
+          materials_cost?: number
+          notes?: string | null
+          product_details?: string
+          quote_number?: string
+          status?: string
+          total_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      log_order_activity: {
+        Args: {
+          p_activity_type: string
+          p_description: string
+          p_details?: Json
+          p_order_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
