@@ -8,10 +8,11 @@
 // Brand Colors Map
 export const BRAND_COLORS = {
   primary: 'hsl(var(--primary))',
-  teal: 'hsl(var(--brand-teal))',
-  pink: 'hsl(var(--brand-pink))',
-  green: 'hsl(var(--brand-green))',
-  cream: 'hsl(var(--brand-cream))',
+  electricBlue: 'hsl(var(--brand-electric-blue))',
+  orange: 'hsl(var(--brand-orange))',
+  evGreen: 'hsl(var(--brand-ev-green))',
+  lightGray: 'hsl(var(--brand-light-gray))',
+  navy: 'hsl(var(--brand-navy))',
 } as const;
 
 // Status Colors (following brand guidelines)
@@ -27,10 +28,11 @@ export const STATUS_COLORS = {
 
 // Icon Background Classes
 export const ICON_BACKGROUNDS = {
-  teal: 'icon-bg-teal',
-  pink: 'icon-bg-pink', 
-  green: 'icon-bg-green',
-  cream: 'icon-bg-cream',
+  electricBlue: 'icon-bg-electric-blue',
+  orange: 'icon-bg-orange', 
+  evGreen: 'icon-bg-ev-green',
+  lightGray: 'icon-bg-light-gray',
+  navy: 'icon-bg-navy',
 } as const;
 
 // Typography Classes
@@ -51,10 +53,11 @@ export const BUTTON_VARIANTS = {
 
 // Badge Variants
 export const BADGE_VARIANTS = {
-  teal: 'badge-teal',
-  green: 'badge-green',
-  pink: 'badge-pink',
-  cream: 'badge-cream',
+  electricBlue: 'badge-electric-blue',
+  evGreen: 'badge-ev-green',
+  orange: 'badge-orange',
+  lightGray: 'badge-light-gray',
+  navy: 'badge-navy',
 } as const;
 
 /**
@@ -97,34 +100,34 @@ export const getBadgeVariant = (variant: keyof typeof BADGE_VARIANTS): string =>
  */
 export const DASHBOARD_TILES = {
   quotes: {
-    iconBg: getIconBackground('teal'),
-    iconColor: 'text-brand-teal',
-    badgeBg: 'bg-brand-teal-light/20',
-    badgeText: 'text-brand-teal',
+    iconBg: getIconBackground('electricBlue'),
+    iconColor: 'text-brand-electric-blue',
+    badgeBg: 'bg-brand-electric-blue-light/20',
+    badgeText: 'text-brand-electric-blue',
   },
   projects: {
-    iconBg: getIconBackground('green'),
-    iconColor: 'text-brand-green', 
-    badgeBg: 'bg-brand-green-light/20',
-    badgeText: 'text-brand-green',
+    iconBg: getIconBackground('evGreen'),
+    iconColor: 'text-brand-ev-green', 
+    badgeBg: 'bg-brand-ev-green-light/20',
+    badgeText: 'text-brand-ev-green',
   },
   messages: {
-    iconBg: getIconBackground('pink'),
-    iconColor: 'text-brand-pink',
-    badgeBg: 'bg-brand-pink-light/20', 
-    badgeText: 'text-brand-pink',
+    iconBg: getIconBackground('orange'),
+    iconColor: 'text-brand-orange',
+    badgeBg: 'bg-brand-orange-light/20', 
+    badgeText: 'text-brand-orange',
   },
   payments: {
-    iconBg: getIconBackground('cream'),
+    iconBg: getIconBackground('lightGray'),
     iconColor: 'text-primary',
-    badgeBg: 'bg-brand-cream/50',
+    badgeBg: 'bg-brand-light-gray/50',
     badgeText: 'text-primary',
   },
   documents: {
-    iconBg: 'bg-accent/20',
-    iconColor: 'text-accent-foreground',
-    badgeBg: 'bg-accent/20',
-    badgeText: 'text-accent-foreground',
+    iconBg: getIconBackground('navy'),
+    iconColor: 'text-brand-navy',
+    badgeBg: 'bg-brand-navy/20',
+    badgeText: 'text-brand-navy',
   },
 } as const;
 

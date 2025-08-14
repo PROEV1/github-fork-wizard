@@ -35,18 +35,26 @@ All colors MUST be HSL.
     --accent: 104 47% 75%; /* #d1d9b0 */
     --accent-foreground: 221 37% 19%;
 
-    /* Brand-specific colors */
-    --brand-teal: 177 29% 66%; /* #8ac4c2 */
-    --brand-teal-light: 177 29% 80%;
-    --brand-teal-dark: 177 29% 50%;
+    /* Brand-specific colors - Pro EV */
+    --brand-electric-blue: 221 100% 40%; /* #0066cc */
+    --brand-electric-blue-light: 221 100% 50%;
+    --brand-electric-blue-dark: 221 100% 30%;
     
-    --brand-pink: 347 58% 88%; /* #f7ccd6 */
-    --brand-pink-light: 347 58% 92%;
-    --brand-pink-dark: 347 58% 75%;
+    --brand-orange: 38 95% 56%; /* #f59e0b */
+    --brand-orange-light: 38 95% 66%;
+    --brand-orange-dark: 38 95% 46%;
     
-    --brand-green: 104 47% 75%; /* #d1d9b0 */
-    --brand-green-light: 104 47% 85%;
-    --brand-green-dark: 104 47% 65%;
+    --brand-ev-green: 142 76% 36%; /* #10b981 */
+    --brand-ev-green-light: 142 76% 46%;
+    --brand-ev-green-dark: 142 76% 26%;
+    
+    --brand-light-gray: 210 40% 96%; /* #f8fafc */
+    --brand-light-gray-light: 210 40% 98%;
+    --brand-light-gray-dark: 210 40% 94%;
+    
+    --brand-navy: 224 76% 48%; /* #1e3a8a */
+    --brand-navy-light: 224 76% 58%;
+    --brand-navy-dark: 224 76% 38%;
     
     --brand-cream: 44 44% 91%; /* #f5efe8 */
     --brand-cream-light: 44 44% 95%;
@@ -147,30 +155,30 @@ All colors MUST be HSL.
     font-weight: 700; /* Bold for brand elements */
   }
 
-  /* Brand utility classes */
-  .brand-gradient-teal {
-    background: linear-gradient(135deg, hsl(var(--brand-teal-light)), hsl(var(--brand-teal)));
+  /* Brand utility classes - Pro EV */
+  .brand-gradient-electric-blue {
+    background: linear-gradient(135deg, hsl(var(--brand-electric-blue-light)), hsl(var(--brand-electric-blue)));
   }
 
-  .brand-gradient-pink {
-    background: linear-gradient(135deg, hsl(var(--brand-pink-light)), hsl(var(--brand-pink)));
+  .brand-gradient-orange {
+    background: linear-gradient(135deg, hsl(var(--brand-orange-light)), hsl(var(--brand-orange)));
   }
 
-  .brand-gradient-green {
-    background: linear-gradient(135deg, hsl(var(--brand-green-light)), hsl(var(--brand-green)));
+  .brand-gradient-ev-green {
+    background: linear-gradient(135deg, hsl(var(--brand-ev-green-light)), hsl(var(--brand-ev-green)));
   }
 
   .brand-gradient-subtle {
     background: linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)));
   }
 
-  /* Brand Status Colors */
+  /* Brand Status Colors - Pro EV */
   .status-sent {
-    @apply bg-brand-teal text-white;
+    @apply bg-brand-electric-blue text-white;
   }
   
   .status-accepted {
-    @apply bg-brand-green text-white;
+    @apply bg-brand-ev-green text-white;
   }
   
   .status-declined {
@@ -178,24 +186,28 @@ All colors MUST be HSL.
   }
   
   .status-pending {
-    @apply bg-brand-pink text-white;
+    @apply bg-brand-orange text-white;
   }
 
-  /* Brand Icon Backgrounds */
-  .icon-bg-teal {
-    @apply bg-brand-teal-light/20;
+  /* Brand Icon Backgrounds - Pro EV */
+  .icon-bg-electric-blue {
+    @apply bg-brand-electric-blue-light/20;
   }
   
-  .icon-bg-pink {
-    @apply bg-brand-pink-light/20;
+  .icon-bg-orange {
+    @apply bg-brand-orange-light/20;
   }
   
-  .icon-bg-green {
-    @apply bg-brand-green-light/20;
+  .icon-bg-ev-green {
+    @apply bg-brand-ev-green-light/20;
   }
   
-  .icon-bg-cream {
-    @apply bg-brand-cream/50;
+  .icon-bg-light-gray {
+    @apply bg-brand-light-gray/50;
+  }
+
+  .icon-bg-navy {
+    @apply bg-brand-navy/20;
   }
 
   /* Brand Card Styles */
@@ -207,34 +219,38 @@ All colors MUST be HSL.
     @apply brand-card cursor-pointer hover:shadow-lg hover:border-brand-teal/30 hover:-translate-y-1;
   }
 
-  /* Brand Button Variants */
+  /* Brand Button Variants - Pro EV */
   .btn-brand-primary {
-    @apply bg-brand-teal hover:bg-brand-teal-dark text-white;
+    @apply bg-brand-electric-blue hover:bg-brand-electric-blue-dark text-white;
   }
   
   .btn-brand-secondary {
-    @apply bg-brand-green hover:bg-brand-green-dark text-white;
+    @apply bg-brand-ev-green hover:bg-brand-ev-green-dark text-white;
   }
   
   .btn-brand-accent {
-    @apply bg-brand-pink hover:bg-brand-pink-dark text-white;
+    @apply bg-brand-orange hover:bg-brand-orange-dark text-white;
   }
 
-  /* Brand Badge Styles */
-  .badge-teal {
-    @apply bg-brand-teal text-white;
+  /* Brand Badge Styles - Pro EV */
+  .badge-electric-blue {
+    @apply bg-brand-electric-blue text-white;
   }
   
-  .badge-green {
-    @apply bg-brand-green text-white;
+  .badge-ev-green {
+    @apply bg-brand-ev-green text-white;
   }
   
-  .badge-pink {
-    @apply bg-brand-pink text-white;
+  .badge-orange {
+    @apply bg-brand-orange text-white;
   }
   
-  .badge-cream {
-    @apply bg-brand-cream text-primary;
+  .badge-light-gray {
+    @apply bg-brand-light-gray text-primary;
+  }
+
+  .badge-navy {
+    @apply bg-brand-navy text-white;
   }
 
   /* Brand Container Styles */
@@ -246,9 +262,9 @@ All colors MUST be HSL.
     @apply container mx-auto px-6 py-8;
   }
 
-  /* Brand Loading Spinner */
+  /* Brand Loading Spinner - Pro EV */
   .brand-spinner {
-    @apply animate-spin rounded-full h-32 w-32 border-b-2 border-brand-teal;
+    @apply animate-spin rounded-full h-32 w-32 border-b-2 border-brand-electric-blue;
   }
 
   /* Custom drag and drop styles */

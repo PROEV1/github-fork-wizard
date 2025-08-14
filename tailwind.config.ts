@@ -51,31 +51,31 @@ export default {
 				'accent-pink': 'hsl(var(--accent-pink))',
 				'accent-green': 'hsl(var(--accent-green))',
 				'accent-cream': 'hsl(var(--accent-cream))',
-				// Brand colors
-				'brand-teal': {
-					DEFAULT: 'hsl(var(--brand-teal))',
-					light: 'hsl(var(--brand-teal-light))',
-					dark: 'hsl(var(--brand-teal-dark))'
+				// Brand colors - Pro EV
+				'brand-electric-blue': {
+					DEFAULT: 'hsl(var(--brand-electric-blue))',
+					light: 'hsl(var(--brand-electric-blue-light))',
+					dark: 'hsl(var(--brand-electric-blue-dark))'
 				},
-				'brand-pink': {
-					DEFAULT: 'hsl(var(--brand-pink))',
-					light: 'hsl(var(--brand-pink-light))',
-					dark: 'hsl(var(--brand-pink-dark))'
+				'brand-orange': {
+					DEFAULT: 'hsl(var(--brand-orange))',
+					light: 'hsl(var(--brand-orange-light))',
+					dark: 'hsl(var(--brand-orange-dark))'
 				},
-				'brand-green': {
-					DEFAULT: 'hsl(var(--brand-green))',
-					light: 'hsl(var(--brand-green-light))',
-					dark: 'hsl(var(--brand-green-dark))'
+				'brand-ev-green': {
+					DEFAULT: 'hsl(var(--brand-ev-green))',
+					light: 'hsl(var(--brand-ev-green-light))',
+					dark: 'hsl(var(--brand-ev-green-dark))'
 				},
-				'brand-cream': {
-					DEFAULT: 'hsl(var(--brand-cream))',
-					light: 'hsl(var(--brand-cream-light))',
-					dark: 'hsl(var(--brand-cream-dark))'
+				'brand-light-gray': {
+					DEFAULT: 'hsl(var(--brand-light-gray))',
+					light: 'hsl(var(--brand-light-gray-light))',
+					dark: 'hsl(var(--brand-light-gray-dark))'
 				},
-				'brand-blue': {
-					DEFAULT: 'hsl(var(--brand-blue))',
-					light: 'hsl(var(--brand-blue-light))',
-					dark: 'hsl(var(--brand-blue-dark))'
+				'brand-navy': {
+					DEFAULT: 'hsl(var(--brand-navy))',
+					light: 'hsl(var(--brand-navy-light))',
+					dark: 'hsl(var(--brand-navy-dark))'
 				},
 				popover: {
 					DEFAULT: 'hsl(var(--popover))',
