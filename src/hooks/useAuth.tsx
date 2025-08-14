@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   userProfile: any | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -23,12 +24,15 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>({ role: 'admin', full_name: 'Admin User' });
   const [loading, setLoading] = useState(false);
 
   const signIn = async (email: string, password: string) => {
-    // Simulated for now
+    // Simulated for now - will be properly implemented when Supabase is connected
+    const mockSession = { user: { email } } as Session;
     setUser({ email } as User);
+    setSession(mockSession);
   };
 
   const signUp = async (email: string, password: string, userData?: any) => {
@@ -37,6 +41,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     setUser(null);
+    setSession(null);
     setUserProfile(null);
   };
 
@@ -46,6 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = {
     user,
+    session,
     userProfile,
     loading,
     signIn,
