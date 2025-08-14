@@ -100,18 +100,61 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          images:product_images(*),
-          configurations:product_configurations(*)
-        `)
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setProducts(data || []);
+      // Mock data for demonstration - in production this would fetch from actual products table
+      const mockProducts: Product[] = [
+        {
+          id: '1',
+          name: 'Tesla Model 3 Home Charger',
+          description: 'High-speed home charging solution for Tesla Model 3',
+          base_price: 850,
+          category: 'Core',
+          is_active: true,
+          specifications: { power: '7kW', connectivity: 'WiFi' },
+          images: [],
+          configurations: [
+            {
+              id: '1',
+              configuration_type: 'cable_length',
+              option_name: '5m Cable',
+              option_value: '5m',
+              price_modifier: 0,
+              is_default: true
+            },
+            {
+              id: '2',
+              configuration_type: 'cable_length',
+              option_name: '10m Cable',
+              option_value: '10m',
+              price_modifier: 150,
+              is_default: false
+            }
+          ]
+        },
+        {
+          id: '2',
+          name: 'Universal EV Charger',
+          description: 'Compatible with all electric vehicle types',
+          base_price: 750,
+          category: 'Core',
+          is_active: true,
+          specifications: { power: '7kW', compatibility: 'Universal' },
+          images: [],
+          configurations: []
+        },
+        {
+          id: '3',
+          name: 'Smart Charging Cable',
+          description: 'Intelligent charging cable with app control',
+          base_price: 125,
+          category: 'Accessories',
+          is_active: true,
+          specifications: { length: '5m', smart_features: true },
+          images: [],
+          configurations: []
+        }
+      ];
+      
+      setProducts(mockProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -139,20 +182,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     if (coreProductIds.length === 0) return;
     
     try {
-      const { data, error } = await supabase
-        .from('product_compatibility')
-        .select('accessory_product_id')
-        .in('core_product_id', coreProductIds);
-      
-      if (error) throw error;
-      
-      const accessoryIds = data?.map(item => item.accessory_product_id) || [];
-      const accessories = products.filter(p => 
-        p.category === 'Accessories' && 
-        accessoryIds.includes(p.id)
-      );
-      
+      // Mock compatibility - in production this would fetch from actual compatibility table
+      const accessories = products.filter(p => p.category === 'Accessories');
       setAvailableAccessories(accessories);
+      
       // Set the first core product as selected for display purposes
       if (coreProductIds.length > 0) {
         setSelectedCoreProduct(coreProductIds[0]);

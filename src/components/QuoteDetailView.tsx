@@ -88,36 +88,55 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
 
   const fetchQuoteItems = async () => {
     try {
-      // Fetch quote items with product data and compatibility info
-      const { data, error } = await supabase
-        .from('quote_items')
-        .select(`
-          *,
-          product:products(
-            id,
-            name,
-            description,
-            category,
-            specifications,
-            images:product_images(
-              image_url,
-              image_name,
-              is_primary
-            )
-          )
-        `)
-        .eq('quote_id', quote.id);
-
-      if (error) throw error;
-      setQuoteItems(data || []);
-
-      // Fetch product compatibility relationships
-      const { data: compatibilityData, error: compatibilityError } = await supabase
-        .from('product_compatibility')
-        .select('core_product_id, accessory_product_id');
-
-      if (compatibilityError) throw compatibilityError;
-      setCompatibilities(compatibilityData || []);
+      // Parse product details from the quote (this is stored as text in the current schema)
+      const mockItems: QuoteItem[] = [];
+      
+      if (quote.product_details) {
+        try {
+          const productData = JSON.parse(quote.product_details);
+          if (Array.isArray(productData)) {
+            productData.forEach((item, index) => {
+              mockItems.push({
+                id: `item-${index}`,
+                product_name: item.name || 'EV Charger',
+                quantity: item.quantity || 1,
+                unit_price: item.price || 0,
+                total_price: (item.price || 0) * (item.quantity || 1),
+                configuration: item.configuration || {},
+                product: {
+                  id: `product-${index}`,
+                  name: item.name || 'EV Charger',
+                  description: item.description || 'Electric vehicle charging solution',
+                  category: item.category || 'Core',
+                  specifications: item.specifications || {},
+                  images: []
+                }
+              });
+            });
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, create a single default item
+          mockItems.push({
+            id: 'item-1',
+            product_name: 'EV Charging System',
+            quantity: 1,
+            unit_price: quote.materials_cost,
+            total_price: quote.materials_cost,
+            configuration: {},
+            product: {
+              id: 'product-1',
+              name: 'EV Charging System',
+              description: 'Professional electric vehicle charging installation',
+              category: 'Core',
+              specifications: {},
+              images: []
+            }
+          });
+        }
+      }
+      
+      setQuoteItems(mockItems);
+      setCompatibilities([]);
     } catch (error) {
       console.error('Error fetching quote items:', error);
       toast({
@@ -182,8 +201,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
         const { error: updateError } = await supabase
           .from('quotes')
           .update({ 
-            is_shareable: true,
-            share_token: newShareToken
+            notes: `shareable:${newShareToken}`
           })
           .eq('id', quote.id);
 
@@ -193,7 +211,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
         // Just enable sharing
         const { error } = await supabase
           .from('quotes')
-          .update({ is_shareable: true })
+          .update({ notes: `shareable:enabled` })
           .eq('id', quote.id);
 
         if (error) throw error;
@@ -285,8 +303,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
         const { error: updateError } = await supabase
           .from('quotes')
           .update({ 
-            is_shareable: true,
-            share_token: newShareToken
+            notes: `shareable:${newShareToken}`
           })
           .eq('id', quote.id);
 
@@ -324,8 +341,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
         const { error: updateError } = await supabase
           .from('quotes')
           .update({ 
-            is_shareable: true,
-            share_token: newShareToken
+            notes: `shareable:${newShareToken}`
           })
           .eq('id', quote.id);
 
@@ -362,8 +378,7 @@ export const QuoteDetailView: React.FC<QuoteDetailViewProps> = ({ quote, onBack,
         const { error: updateError } = await supabase
           .from('quotes')
           .update({ 
-            is_shareable: true,
-            share_token: newShareToken
+            notes: `shareable:${newShareToken}`
           })
           .eq('id', quote.id);
 

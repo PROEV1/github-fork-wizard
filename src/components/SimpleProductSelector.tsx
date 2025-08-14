@@ -1,41 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Product {
   id: string;
   name: string;
-  description: string | null;
+  description: string;
   base_price: number;
-  category: string | null;
-}
-
-interface SelectedProduct {
-  product: Product;
-  quantity: number;
-  totalPrice: number;
+  category: string;
 }
 
 interface SimpleProductSelectorProps {
-  selectedProducts: SelectedProduct[];
-  onSelectionChange: (products: SelectedProduct[]) => void;
+  onProductsChange: (products: Array<{ product: Product; quantity: number; total: number }>) => void;
 }
 
-export const SimpleProductSelector: React.FC<SimpleProductSelectorProps> = ({
-  selectedProducts,
-  onSelectionChange
-}) => {
+export const SimpleProductSelector: React.FC<SimpleProductSelectorProps> = ({ onProductsChange }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedProducts, setSelectedProducts] = useState<Array<{ product: Product; quantity: number; total: number }>>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -44,14 +32,31 @@ export const SimpleProductSelector: React.FC<SimpleProductSelectorProps> = ({
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, description, base_price, category')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setProducts(data || []);
+      // Mock products for demo
+      const mockProducts: Product[] = [
+        {
+          id: '1',
+          name: 'Tesla Home Charger',
+          description: 'High-speed 7kW home charging station',
+          base_price: 850,
+          category: 'Charger'
+        },
+        {
+          id: '2',
+          name: 'Universal EV Charger',
+          description: 'Compatible with all electric vehicles',
+          base_price: 750,
+          category: 'Charger'
+        },
+        {
+          id: '3',
+          name: 'Smart Charging Cable',
+          description: 'App-controlled charging cable',
+          base_price: 125,
+          category: 'Accessory'
+        }
+      ];
+      setProducts(mockProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -59,44 +64,32 @@ export const SimpleProductSelector: React.FC<SimpleProductSelectorProps> = ({
         description: "Failed to load products",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleAddProduct = () => {
-    if (!selectedProductId || quantity <= 0) return;
-
     const product = products.find(p => p.id === selectedProductId);
     if (!product) return;
 
-    // Check if product already selected
-    const existingIndex = selectedProducts.findIndex(sp => sp.product.id === product.id);
-    let updatedProducts;
-
-    const newSelection: SelectedProduct = {
+    const newProduct = {
       product,
       quantity,
-      totalPrice: product.base_price * quantity
+      total: product.base_price * quantity
     };
 
-    if (existingIndex >= 0) {
-      // Update existing
-      updatedProducts = [...selectedProducts];
-      updatedProducts[existingIndex] = newSelection;
-    } else {
-      // Add new
-      updatedProducts = [...selectedProducts, newSelection];
-    }
+    const updatedProducts = [...selectedProducts, newProduct];
+    setSelectedProducts(updatedProducts);
+    onProductsChange(updatedProducts);
 
-    onSelectionChange(updatedProducts);
+    // Reset form
     setSelectedProductId('');
     setQuantity(1);
   };
 
-  const handleRemoveProduct = (productId: string) => {
-    const updatedProducts = selectedProducts.filter(sp => sp.product.id !== productId);
-    onSelectionChange(updatedProducts);
+  const handleRemoveProduct = (index: number) => {
+    const updatedProducts = selectedProducts.filter((_, i) => i !== index);
+    setSelectedProducts(updatedProducts);
+    onProductsChange(updatedProducts);
   };
 
   const formatCurrency = (amount: number) => {
@@ -106,79 +99,92 @@ export const SimpleProductSelector: React.FC<SimpleProductSelectorProps> = ({
     }).format(amount);
   };
 
-  if (loading) {
-    return <div className="text-center py-4">Loading products...</div>;
-  }
-
   return (
     <div className="space-y-4">
-      {/* Product Selection Form */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-        <div className="md:col-span-2">
-          <Label>Select Product</Label>
-          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose a product..." />
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((product) => (
-                <SelectItem key={product.id} value={product.id}>
-                  {product.name} - {formatCurrency(product.base_price)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div>
-          <Label>Quantity</Label>
-          <Input
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-          />
-        </div>
-        
-        <Button onClick={handleAddProduct} disabled={!selectedProductId}>
-          Add Product
-        </Button>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Products</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Product</Label>
+            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a product" />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name} - {formatCurrency(product.base_price)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Selected Products List */}
+          <div>
+            <Label>Quantity</Label>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                disabled={quantity <= 1}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-20 text-center"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuantity(quantity + 1)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          <Button onClick={handleAddProduct} disabled={!selectedProductId}>
+            Add Product
+          </Button>
+        </CardContent>
+      </Card>
+
       {selectedProducts.length > 0 && (
-        <div className="space-y-2">
-          <Label>Selected Products:</Label>
-          {selectedProducts.map((selectedProduct) => (
-            <Card key={selectedProduct.product.id}>
-              <CardContent className="p-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{selectedProduct.product.name}</span>
-                      <Badge variant="outline">Qty: {selectedProduct.quantity}</Badge>
-                    </div>
-                    {selectedProduct.product.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {selectedProduct.product.description}
-                      </p>
-                    )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Selected Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {selectedProducts.map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-2 border rounded">
+                  <div>
+                    <p className="font-medium">{item.product.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Qty: {item.quantity} × {formatCurrency(item.product.base_price)}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{formatCurrency(selectedProduct.totalPrice)}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">{formatCurrency(item.total)}</span>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      onClick={() => handleRemoveProduct(selectedProduct.product.id)}
+                      onClick={() => handleRemoveProduct(index)}
                     >
-                      <X className="h-4 w-4" />
+                      Remove
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
