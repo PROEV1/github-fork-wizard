@@ -34,9 +34,8 @@ interface UserAccount {
   email: string;
   full_name: string | null;
   role: string;
-  status: string;
-  last_login: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 interface Project {
@@ -149,9 +148,9 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
           .from('profiles')
           .select('*')
           .eq('user_id', client.user_id)
-          .single();
+          .maybeSingle();
 
-        if (userError && userError.code !== 'PGRST116') {
+        if (userError) {
           console.error('User profile error:', userError);
         } else if (userData) {
           setUserAccount(userData);
@@ -258,24 +257,8 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
 
       if (quoteError) throw quoteError;
 
-      // Create quote items for selected products
-      if (selectedProducts.length > 0) {
-        const quoteItems = selectedProducts.map(item => ({
-          quote_id: quoteData.id,
-          product_id: item.product.id,
-          product_name: item.product.name,
-          quantity: item.quantity,
-          unit_price: item.product.base_price,
-          total_price: item.totalPrice,
-          configuration: {}
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('quote_items')
-          .insert(quoteItems);
-
-        if (itemsError) throw itemsError;
-      }
+      // For now, just create the quote without items since quote_items table doesn't exist
+      // This can be expanded later when product catalog is implemented
 
       toast({
         title: "Success",
@@ -376,36 +359,9 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
   };
 
   const loadQuoteItems = async (quoteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('quote_items')
-        .select(`
-          *,
-          product:products(
-            *,
-            images:product_images(*),
-            configurations:product_configurations(*)
-          )
-        `)
-        .eq('quote_id', quoteId);
-
-      if (error) throw error;
-
-      const products: SelectedProduct[] = data.map(item => ({
-        product: {
-          ...item.product,
-          images: item.product.images || [],
-          configurations: item.product.configurations || []
-        },
-        quantity: item.quantity,
-        configuration: typeof item.configuration === 'object' && item.configuration !== null ? item.configuration as Record<string, string> : {},
-        totalPrice: item.total_price
-      }));
-      
-      setSelectedProducts(products);
-    } catch (error) {
-      console.error('Error loading quote items:', error);
-    }
+    // Quote items functionality disabled until product catalog is implemented
+    console.log('Quote items loading disabled - no product catalog yet');
+    setSelectedProducts([]);
   };
 
   const handleUpdateQuote = async () => {
@@ -428,32 +384,8 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
 
       if (quoteError) throw quoteError;
 
-      // Delete existing quote items
-      const { error: deleteError } = await supabase
-        .from('quote_items')
-        .delete()
-        .eq('quote_id', editingQuote.id);
-
-      if (deleteError) throw deleteError;
-
-      // Create new quote items
-      if (selectedProducts.length > 0) {
-        const quoteItems = selectedProducts.map(item => ({
-          quote_id: editingQuote.id,
-          product_id: item.product.id,
-          product_name: item.product.name,
-          quantity: item.quantity,
-          unit_price: item.product.base_price,
-          total_price: item.totalPrice,
-          configuration: {}
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('quote_items')
-          .insert(quoteItems);
-
-        if (itemsError) throw itemsError;
-      }
+      // Quote items functionality disabled until product catalog is implemented
+      console.log('Quote items deletion disabled - no product catalog yet');
 
       toast({
         title: "Success",
@@ -491,13 +423,8 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
     }
 
     try {
-      // Delete quote items first
-      const { error: itemsError } = await supabase
-        .from('quote_items')
-        .delete()
-        .eq('quote_id', quoteId);
-
-      if (itemsError) throw itemsError;
+      // Quote items functionality disabled until product catalog is implemented
+      console.log('Quote items deletion disabled - no product catalog yet');
 
       // Delete quote
       const { error: quoteError } = await supabase
@@ -589,31 +516,12 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
   const handleDeactivateUser = async () => {
     if (!client.user_id || !userAccount) return;
 
-    const newStatus = userAccount.status === 'active' ? 'inactive' : 'active';
-    
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ status: newStatus })
-        .eq('user_id', client.user_id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `User account ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
-      });
-
-      // Reload data to get updated status
-      loadClientData();
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
-      });
-    }
+    // Note: User deactivation functionality not implemented yet
+    toast({
+      title: "Info",
+      description: "User deactivation feature not implemented yet",
+      variant: "default",
+    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -630,8 +538,6 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
 
   const getAccountStatus = () => {
     if (!userAccount) return 'No Account';
-    if (userAccount.status === 'inactive') return 'Deactivated';
-    if (!userAccount.last_login) return 'Never Logged In';
     return 'Active';
   };
 
@@ -639,8 +545,6 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
     const status = getAccountStatus();
     switch (status) {
       case 'Active': return 'bg-green-500';
-      case 'Never Logged In': return 'bg-yellow-500';
-      case 'Deactivated': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
@@ -1080,12 +984,9 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
                   </Badge>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Last Login</Label>
+                  <Label className="text-sm font-medium">Account Created</Label>
                   <p className="text-sm text-muted-foreground">
-                    {userAccount.last_login 
-                      ? new Date(userAccount.last_login).toLocaleDateString() 
-                      : 'Never logged in'
-                    }
+                    {new Date(userAccount.created_at).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -1115,11 +1016,12 @@ export const ClientProfile: React.FC<ClientProfileProps> = ({ client, onBack }) 
                   Reset Password
                 </Button>
                 <Button 
-                  variant={userAccount.status === 'active' ? 'destructive' : 'default'}
+                  variant="outline"
                   size="sm"
                   onClick={handleDeactivateUser}
+                  disabled
                 >
-                  {userAccount.status === 'active' ? 'Deactivate Account' : 'Activate Account'}
+                  Deactivate Account (Coming Soon)
                 </Button>
                 <Button 
                   variant="outline" 
